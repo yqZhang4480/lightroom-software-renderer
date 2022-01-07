@@ -1,0 +1,26 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="lrmath.hpp" />
+    <ClInclude Include="lrmath\lrutility.hpp">
+      <Filter>lrmath</Filter>
+    </ClInclude>
+    <ClInclude Include="lrmath\TransformMixer.hpp">
+      <Filter>lrmath</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="lrmath">
+      <UniqueIdentifier>{5fb51e99-4a00-4b96-8d14-b36abf01a969}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="lrmath\Homogeneous.hpp">
+      <Filter>lrmath</Filter>
+    </ClCompile>
+    <ClCompile Include="main.cpp" />
+  </ItemGroup>
+</Project>
