@@ -19,6 +19,10 @@
     <ClInclude Include="drawing\GraphObj.hpp">
       <Filter>drawing</Filter>
     </ClInclude>
+    <ClInclude Include="shading.hpp" />
+    <ClInclude Include="shading\shading_utility.hpp">
+      <Filter>shading</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="lrmath">
@@ -26,6 +30,9 @@
     </Filter>
     <Filter Include="drawing">
       <UniqueIdentifier>{fe8ec151-ad69-4cc8-843e-e34c15ffe89d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="shading">
+      <UniqueIdentifier>{ed242360-73d3-4df0-b55a-68a8e3c52b50}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>

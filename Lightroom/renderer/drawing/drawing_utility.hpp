@@ -61,14 +61,17 @@ namespace lightroom
     {
     protected:
         PxCoordinate _size;
+        std::vector<NormalizedColor> _data;
     public:
-        virtual NormalizedColor& operator[] (int) const = 0;
-        virtual ~NormalizedColorMap() {}
-        virtual int getWidth() const
+        NormalizedColor& operator[] (size_t _index)
+        {
+            return _data[_index];
+        }
+        int getWidth() const
         {
             return _size[0];
         }
-        virtual int getHeight() const
+        int getHeight() const
         {
             return _size[1];
         }
