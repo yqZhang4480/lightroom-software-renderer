@@ -149,9 +149,13 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="drawing.hpp" />
+    <ClInclude Include="drawing\drawing_utility.hpp" />
+    <ClInclude Include="drawing\GraphObj.hpp" />
     <ClInclude Include="lrmath.hpp" />
-    <ClInclude Include="lrmath\lrutility.hpp" />
+    <ClInclude Include="lrmath\lrmath_utility.hpp" />
     <ClInclude Include="lrmath\TransformMixer.hpp" />
+    <ClInclude Include="lrutility.hpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

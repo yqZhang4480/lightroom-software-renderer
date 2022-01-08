@@ -5,16 +5,27 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="lrmath.hpp" />
-    <ClInclude Include="lrmath\lrutility.hpp">
+    <ClInclude Include="lrmath\lrmath_utility.hpp">
       <Filter>lrmath</Filter>
     </ClInclude>
     <ClInclude Include="lrmath\TransformMixer.hpp">
       <Filter>lrmath</Filter>
     </ClInclude>
+    <ClInclude Include="drawing.hpp" />
+    <ClInclude Include="drawing\drawing_utility.hpp">
+      <Filter>drawing</Filter>
+    </ClInclude>
+    <ClInclude Include="lrutility.hpp" />
+    <ClInclude Include="drawing\GraphObj.hpp">
+      <Filter>drawing</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="lrmath">
       <UniqueIdentifier>{5fb51e99-4a00-4b96-8d14-b36abf01a969}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="drawing">
+      <UniqueIdentifier>{fe8ec151-ad69-4cc8-843e-e34c15ffe89d}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>

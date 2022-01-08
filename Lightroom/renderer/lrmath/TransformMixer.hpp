@@ -1,5 +1,5 @@
 #pragma once
-#include "lrutility.hpp"
+#include "lrmath_utility.hpp"
 
 namespace lightroom
 {
