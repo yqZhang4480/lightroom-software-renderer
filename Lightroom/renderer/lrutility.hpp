@@ -50,6 +50,17 @@
 #include <tuple>
 #endif // !_tuple_
 
+#ifndef _list_
+#define _list_
+#include <list>
+#endif // !_list_
+
+#ifndef _unordered_map_
+#define _unordered_map_
+#include <unordered_map>
+#endif // !_unordered_map_
+
+
 #ifndef _ShellScalingApi_H_
 #define _ShellScalingApi_H_
 #include <ShellScalingApi.h>

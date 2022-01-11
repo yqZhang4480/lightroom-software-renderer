@@ -7,12 +7,13 @@ namespace lightroom
     class Homogeneous : public Vector<_N>
     {
     public:
-        explicit Homogeneous(const Vector<_N - 1>& _normalCoordinate)
+        Homogeneous(const Vector<_N - 1>& _normalCoordinate)
         {
             _overwrite_vector<_N - 1, _N>(_normalCoordinate, *this);
             (*this)[_N - 1] = 1;
         }
         using Vector<_N>::operator=;
+        using Vector<_N>::operator/=;
 
         Vector<_N - 1> toOrdinaryCoordinate()
         {

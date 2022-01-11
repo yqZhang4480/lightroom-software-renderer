@@ -7,46 +7,103 @@
 
 namespace lightroom
 {
-    class PointLight : public Vertex3D
+    class PointLight
     {
     public:
-        PointLight(const Homogeneous<4>& _position, const NormalizedColor& _intensity) :
-            Vertex3D(_position, Homogeneous<4>({ 0.0, 0.0, 0.0 }), _intensity) {}
-        ~PointLight() {}
+        PointLight(Vertex3D* _vertex) : vertex(_vertex) {}
+
+        Vertex3D* vertex;
     };
 
     struct Camara
     {
-        Homogeneous<4> position;
-        Homogeneous<4> gazeDirection;
-        Homogeneous<4> topDirection;
+        Vector<3> position;
+        Vector<3> gazeDirection;
+        Vector<3> topDirection;
         Angle fov;
+
+        Camara(const Vector<3>& _position, const Vector<3>& _gazeDirection, const Vector<3>& _topDirection, Angle _fov) :
+            position(_position), gazeDirection(_gazeDirection), topDirection(_topDirection), fov(_fov) {}
     };
 
-    class SceneManager
+    class PipelineManager
     {
     public:
-        SceneManager& useCamara(size_t _camaraIndex)
+        PipelineManager()
+        {
+            _ncm = NormalizedColorMap({ _viewport.getWidth(), _viewport.getHeight() });
+        }
+        ~PipelineManager()
+        {
+            for (auto& _go : _graphObjects)
+            {
+                delete _go;
+            }
+        }
+
+        void useCamara(size_t _camaraIndex)
         {
             this->_camaraIndex = _camaraIndex;
         }
 
         void render()
         {
-            _shade();
-            for (auto& _graphObj : _graphObjects)
+            _vertexsShade();
+            _mvpTransform();
+            _viewportTransform();
+            for (auto _graphObj : _graphObjects)
             {
-                _graphObj.draw(_ncm, _depthBuffer, _refBuffer);
+                _graphObj->draw(_ncm, _vertexsOut, _depthBuffer, _refBuffer);
             }
+            _viewport.print(_ncm);
         }
 
+        template <typename... _Args>
+        Vertex3D* addVertex(_Args&&... _args)
+        {
+            _vertexsIn.emplace_front(_args...);
+
+            auto _ret = &_vertexsIn.front();
+            _vertexsOut.insert({ _ret, *_ret });
+            return _ret;
+        }
+        template <typename... _Args>
+        GraphObj3D* addGraphObject(GraphObjType _type, _Args&&... _args)
+        {
+            switch (_type)
+            {
+                case lightroom::GraphObjType::LINE:
+                    break;
+                case lightroom::GraphObjType::TRIANGLE:
+                    _graphObjects.push_back(new Triangle3D(_args...));
+                    break;
+                default:
+                    break;
+            }
+
+            return _graphObjects.back();
+        }
+        template <typename... _Args>
+        void addPointLight(_Args&&... _args)
+        {
+            _pointLights.emplace_back(_args...);
+        }
+        template <typename... _Args>
+        size_t addCamara(_Args&&... _args)
+        {
+            _camaras.emplace_back(_args...);
+            return _camaras.size() - 1;
+        }
 
     private:
-        std::list<Vertex3D> _vertexs;
-        std::list<GraphObj3D> _graphObjects;
-
-        std::vector<Camara> _camaras;
+    public:
+        std::list<Vertex3D> _vertexsIn;
+        std::unordered_map<const Vertex3D*, Vertex3D> _vertexsOut;
+        std::list<GraphObj3D*> _graphObjects;
         std::vector<PointLight> _pointLights;
+
+        Viewport _viewport;
+        std::vector<Camara> _camaras;
         NormalizedColor _ambient;
 
         NormalizedColorMap _ncm;
@@ -55,9 +112,88 @@ namespace lightroom
 
         size_t _camaraIndex;
 
-        void _shade()
+        inline void _vertexsShade()
         {
+            _prepareOut();
+            _vertexAmbientShade();
+            _vertexDiffuseShade();
+        }
+        inline void _prepareOut()
+        {
+            _vertexsOut.clear();
 
+            const auto _end = _vertexsIn.cend();
+            for (auto _i = _vertexsIn.cbegin(); _i != _end; _i++)
+            {
+                _vertexsOut[&*_i] = *_i;
+            }
+        }
+        inline void _vertexAmbientShade()
+        {
+            for (auto& _p : _vertexsOut)
+            {
+                _p.second.color = _ambient;
+            }
+        }
+        inline void _vertexDiffuseShade()
+        {
+            for (const auto& _pl : _pointLights)
+            {
+                for (auto& _p : _vertexsOut)
+                {
+                    auto& _v = _p.second;
+                    auto _l = _pl.vertex->position.toOrdinaryCoordinate() - _v.position.toOrdinaryCoordinate();
+                    Float _diffuse = std::max<Float>(Float(0), -_v.normal.toOrdinaryCoordinate().dot(_l.normalized()));
+                    _v.color += _pl.vertex->color * _diffuse;
+                }
+            }
+        }
+
+        inline void _mvpTransform()
+        {
+            TransformMixer3D _tm;
+            const auto& _camara = _camaras[_camaraIndex];
+
+            constexpr const Float _r = 1;
+            constexpr const Float _t = 1;
+            constexpr const Float _f = 10000;
+            Float _n = -_r * cos(_camara.fov / 2) / sin(_camara.fov / 2);
+            Matrix<4> _perspective, _ortho;
+            _perspective <<
+                _n, 0, 0, 0,
+                0, _n, 0, 0,
+                0, 0, _n + _f, -_n * _f,
+                0, 0, Float(1), 0;
+            _ortho <<
+                Float(1) / _r, 0, 0, 0,
+                0, Float(1) / _t, 0, 0,
+                0, 0, Float(2) / (_n - _f), -(_n + _f) / (_n - _f),
+                0, 0, 0, Float(1);
+
+            _tm.changeBase(
+                _camara.position,
+                _camara.topDirection.cross(-_camara.gazeDirection),
+                _camara.topDirection,
+                -_camara.gazeDirection)
+                .apply(_perspective)
+                .apply(_ortho);
+
+            for (auto& _p : _vertexsOut)
+            {
+                _p.second.apply(_tm.getTransformMatrix());
+            }
+        }
+
+        inline void _viewportTransform()
+        {
+            TransformMixer3D _tm;
+            _tm.scale(_viewport.getWidth() / 2.0, -_viewport.getHeight() / 2.0, 1)
+                .translate((_viewport.getWidth() - 1) / 2, (_viewport.getHeight() - 1) / 2, 0);
+
+            for (auto& _p : _vertexsOut)
+            {
+                _p.second.apply(_tm.getTransformMatrix());
+            }
         }
     };
 };

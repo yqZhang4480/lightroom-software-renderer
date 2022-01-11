@@ -32,30 +32,38 @@ namespace lightroom
             return static_cast<COLORREF>(*this);
         }
 
+        NormalizedColor& operator+= (const NormalizedColor& _nc2)
+        {
+            *this = *this + _nc2;
+            return *this;
+        }
+        NormalizedColor& operator*= (Float _factor)
+        {
+            *this = *this * _factor;
+            return *this;
+        }
         friend NormalizedColor operator+ (const NormalizedColor& _nc1, const NormalizedColor& _nc2)
         {
-            return _nc1 + _nc2;
+            return Eigen::Matrix<Float, 4, 1>(_nc1.Eigen::Matrix<Float, 4, 1>::operator+(_nc2));
         }
         friend NormalizedColor operator* (const NormalizedColor& _nc, Float _factor)
         {
-            return _nc * _factor;
+            return Eigen::Matrix<Float, 4, 1>(_nc.Eigen::Matrix<Float, 4, 1>::operator*(_factor));
         }
         friend NormalizedColor operator* (Float _factor, const NormalizedColor& _nc)
         {
-            return _nc * _factor;
+            return Eigen::Matrix<Float, 4, 1>(_nc.Eigen::Matrix<Float, 4, 1>::operator*(_factor));
         }
+    protected:
+        NormalizedColor(Eigen::Matrix<Float, 4, 1>&& _matrix) : Matrix(std::move(_matrix)) {}
     };
 
+    class GraphObj3D;
+    class Triangle3D;
     using PxCoordinate = Eigen::Matrix<int, 2, 1>;
     using ViewportCoordinate = Eigen::Matrix<Float, 2, 1>;
     using DepthBuffer = std::vector<Float>;
     using ReferenceBuffer = std::vector<GraphObj3D const*>;
-
-    class Viewport
-    {
-    public:
-        Viewport() = default;
-    };
 
     class NormalizedColorMap
     {
@@ -63,7 +71,19 @@ namespace lightroom
         PxCoordinate _size;
         std::vector<NormalizedColor> _data;
     public:
+        NormalizedColorMap(const PxCoordinate& _size = { 0,0 }, const NormalizedColor& _color = { 0,0,0,1 }) :
+            _data(_size[0] * _size[1])
+        {
+            for (auto& _d : _data)
+            {
+                _d = _color;
+            }
+        }
         NormalizedColor& operator[] (size_t _index)
+        {
+            return _data[_index];
+        }
+        const NormalizedColor& operator[] (size_t _index) const
         {
             return _data[_index];
         }
@@ -77,6 +97,84 @@ namespace lightroom
         }
     };
 
+    class Viewport
+    {
+    public:
+        Viewport(LPRECT lpRect = nullptr, const NormalizedColor& _backgroundColor = {}, const int _flag = 0)
+        {
+            SetProcessDpiAwareness(PROCESS_SYSTEM_DPI_AWARE);
+            int max_w = GetSystemMetrics(SM_CXSCREEN);
+            int max_h = GetSystemMetrics(SM_CYSCREEN);
+            int left, top;
+            if (lpRect == nullptr)
+            {
+                left = 0;
+                top = 0;
+                _width = max_w;
+                _height = max_h;
+            }
+            else
+            {
+                left = lpRect->left;
+                top = lpRect->top;
+                _width = lpRect->right - lpRect->left;
+                _height = lpRect->bottom - lpRect->top;
+                if (_width <= 0)
+                {
+                    _width = max_w - 2 * left;
+                }
+                if (_height <= 0)
+                {
+                    _height = max_h - 2 * top;
+                }
+            }
+
+            background = NormalizedColorMap(PxCoordinate{ _width, _height }, _backgroundColor);
+            HWND _hwnd = initgraph(_width, _height, _flag);
+
+
+            LONG _winStyle = GetWindowLong(_hwnd, GWL_STYLE);
+            SetWindowLong(_hwnd, GWL_STYLE,
+                (_winStyle | WS_POPUP) & ~WS_CAPTION & ~WS_THICKFRAME & ~WS_BORDER);
+            SetWindowPos(_hwnd, HWND_TOP, left, top, _width, _height, 0);
+            
+            BeginBatchDraw();
+
+            if (lpRect != nullptr)
+            {
+                lpRect->left = left;
+                lpRect->right = left + _width;
+                lpRect->top = top;
+                lpRect->bottom = top + _height;
+            }
+        }
+        ~Viewport() = default;
+        Viewport(const Viewport&) = delete;
+        Viewport& operator=(const Viewport&) = delete;
+
+        int getWidth()
+        {
+            return _width;
+        }
+        int getHeight()
+        {
+            return _height;
+        }
+        void print(const NormalizedColorMap& _ncm, IMAGE* _outDevice = NULL) const
+        {
+            auto _imgBuffer = GetImageBuffer(_outDevice);
+            for (size_t _i = 0; _i < static_cast<size_t>(_width) * _height; _i++)
+            {
+                _imgBuffer[_i] = _ncm[_i].toRGBColor();
+            }
+            FlushBatchDraw();
+        }
+        NormalizedColorMap background;
+    private:
+        int _width;
+        int _height;
+
+    };
     /*class Printer
     {
     public:
@@ -118,10 +216,9 @@ namespace lightroom
     class Vertex3D
     {
     public:
-        Vertex3D() = default;
         Vertex3D(
-            const Homogeneous<4>& position,
-            const Homogeneous<4>& normal,
+            const Homogeneous<4>& position = Homogeneous<4>(Vector<3>{ 0, 0, 0 }),
+            const Homogeneous<4>& normal = Homogeneous<4>(Vector<3>{ 0, 0, 0 }),
             const NormalizedColor& color = { 0, 0, 0 }) :
             position(position), color(color), normal(normal) {}
 
@@ -136,10 +233,18 @@ namespace lightroom
         Homogeneous<4> normal;
         NormalizedColor color;
     };
+
+    enum class GraphObjType
+    {
+        LINE, TRIANGLE
+    };
     class GraphObj3D
     {
     public:
-        virtual void draw(NormalizedColorMap&, DepthBuffer&, ReferenceBuffer&) const = 0;
+        virtual void draw(NormalizedColorMap&, 
+                          std::unordered_map<const Vertex3D*, Vertex3D>,
+                          DepthBuffer&,
+                          ReferenceBuffer&) const = 0;
         virtual ~GraphObj3D() {}
     };
     class Triangle3D : public GraphObj3D
@@ -154,13 +259,14 @@ namespace lightroom
             _v[1]->relatedTriangles.push_back(this);
             _v[2]->relatedTriangles.push_back(this);
         }
-
+        virtual ~Triangle3D() {}
         inline bool isVaild() const
         {
             return (_vertexs[0] != nullptr) && (_vertexs[1] != nullptr) && (_vertexs[2] != nullptr);
         }
         virtual void draw(
             NormalizedColorMap& _ncm,
+            std::unordered_map<const Vertex3D*, Vertex3D> _vertexsOut,
             DepthBuffer& _depthBuffer,
             ReferenceBuffer& _refBuffer) const override
         {
@@ -169,12 +275,12 @@ namespace lightroom
                 return;
             }
 
-            int _x0 = _vertexs[0]->position[0],
-                _x1 = _vertexs[1]->position[0],
-                _x2 = _vertexs[2]->position[0],
-                _y0 = _vertexs[0]->position[1],
-                _y1 = _vertexs[1]->position[1],
-                _y2 = _vertexs[2]->position[1];
+            int _x0 = _vertexsOut[_vertexs[0]].position[0],
+                _x1 = _vertexsOut[_vertexs[1]].position[0],
+                _x2 = _vertexsOut[_vertexs[2]].position[0],
+                _y0 = _vertexsOut[_vertexs[0]].position[1],
+                _y1 = _vertexsOut[_vertexs[1]].position[1],
+                _y2 = _vertexsOut[_vertexs[2]].position[1];
             int _x_min = max(0, min(min(_x0, _x1), _x2)),
                 _x_max = min(_ncm.getWidth(), max(max(_x0, _x1), _x2)),
                 _y_min = max(0, min(min(_y0, _y1), _y2)),
@@ -213,7 +319,7 @@ namespace lightroom
     protected:
         inline void _evaluateColorAndDepth(
             int _x, int _y,
-            Float& _beta, Float& _gamma,
+            Float _beta, Float _gamma,
             NormalizedColorMap& _ncm,
             DepthBuffer& _depthBuffer,
             ReferenceBuffer& _refBuffer) const
