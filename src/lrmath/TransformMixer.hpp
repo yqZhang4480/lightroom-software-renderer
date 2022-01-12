@@ -66,10 +66,7 @@ namespace lightroom
         }
         inline TransformMixer3D& changeBase(
             const Vector<3>& _originPoint,
-            const Vector<3>& _axisU,
-            const Vector<3>& _axisV,
-            const Vector<3>& _axisW
-            )
+            const Vector<3>& _axisU, const Vector<3>& _axisV, const Vector<3>& _axisW)
         {
             lightroom::Matrix<4> _rotate;
             _rotate <<

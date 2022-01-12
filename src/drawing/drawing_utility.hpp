@@ -224,7 +224,7 @@ namespace lightroom
 
         Vertex3D& apply(const Matrix<4>& _transformMatrix)
         {
-            position = _transformMatrix * position;
+            position = Vector<4>(_transformMatrix * position);
             return *this;
         }
         std::vector<Triangle3D const*> relatedTriangles;

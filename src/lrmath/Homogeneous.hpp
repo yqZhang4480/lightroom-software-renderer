@@ -12,8 +12,7 @@ namespace lightroom
             _overwrite_vector<_N - 1, _N>(_normalCoordinate, *this);
             (*this)[_N - 1] = 1;
         }
-        using Vector<_N>::operator=;
-        using Vector<_N>::operator/=;
+        Homogeneous(const Vector<_N>& _homogeneousCoordinate) : Vector<_N>(_homogeneousCoordinate) {}
 
         Vector<_N - 1> toOrdinaryCoordinate()
         {
