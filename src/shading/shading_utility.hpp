@@ -29,10 +29,12 @@ namespace lightroom
     class PipelineManager
     {
     public:
-        PipelineManager()
-        {
-
-        }
+        PipelineManager() :
+            _ncm({ _viewport.getWidth(), _viewport.getHeight() }),
+            _mask(_viewport.getWidth()* _viewport.getHeight(), false),
+            _refBuffer(_viewport.getWidth() * _viewport.getHeight(), nullptr),
+            _depthBuffer(_viewport.getWidth() * _viewport.getHeight(), -1)
+        {}
         ~PipelineManager()
         {
             for (auto& _go : _graphObjects)
@@ -55,9 +57,9 @@ namespace lightroom
             _viewportTransform();
             for (auto _graphObj : _graphObjects)
             {
-                _graphObj->draw(_ncm, _vertexsOut, _depthBuffer, _refBuffer);
+                _graphObj->draw(_ncm, _mask, _vertexsOut, _depthBuffer, _refBuffer);
             }
-            _viewport.print(_ncm);
+            _viewport.print(_ncm, _mask);
         }
 
         template <typename... _Args>
@@ -97,7 +99,6 @@ namespace lightroom
             return _camaras.size() - 1;
         }
 
-    private:
     public:
         std::list<Vertex3D> _vertexsIn;
         std::unordered_map<const Vertex3D*, Vertex3D> _vertexsOut;
@@ -109,6 +110,7 @@ namespace lightroom
         NormalizedColor _ambient;
 
         NormalizedColorMap _ncm;
+        OverwriteMask _mask;
         DepthBuffer _depthBuffer;
         ReferenceBuffer _refBuffer;
 
@@ -121,11 +123,10 @@ namespace lightroom
         }
         inline void _prepare()
         {
-            _ncm = NormalizedColorMap({ _viewport.getWidth(), _viewport.getHeight() });
-            _refBuffer = ReferenceBuffer(_viewport.getWidth() * _viewport.getHeight(), nullptr);
-            _depthBuffer = DepthBuffer(_viewport.getWidth() * _viewport.getHeight(), -1);
-
-            _vertexsOut.clear();
+            _mask       .clear();
+            _refBuffer  .clear();
+            _depthBuffer.clear();
+            _vertexsOut .clear();
 
             const auto _end = _vertexsIn.cend();
             for (auto _i = _vertexsIn.cbegin(); _i != _end; _i++)

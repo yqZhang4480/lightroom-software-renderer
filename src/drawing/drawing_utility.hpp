@@ -7,13 +7,13 @@
 
 namespace lightroom
 {
-    class NormalizedColor : public Eigen::Matrix<Float, 4, 1>
+    class NormalizedColor
     {
     public:
-        NormalizedColor() : Matrix{ 0,0,0,1 } {}
-        NormalizedColor(Float _r, Float _g, Float _b, Float _a = 1) : Matrix{_r, _g, _b, _a} {}
+        NormalizedColor() : _rgba{ 0,0,0,1 } {}
+        NormalizedColor(Float _r, Float _g, Float _b, Float _a = 1) : _rgba{_r, _g, _b, _a} {}
         NormalizedColor(COLORREF _rgb) :
-            Matrix{
+            _rgba{
                 ((_rgb & 0x00ff0000) >> 16) / Float(256),
                 ((_rgb & 0x0000ff00) >> 8)  / Float(256),
                 ( _rgb & 0x000000ff)        / Float(256),
@@ -32,39 +32,80 @@ namespace lightroom
             return static_cast<COLORREF>(*this);
         }
 
-        using Eigen::Matrix<Float, 4, 1>::operator[];
-        NormalizedColor& operator+= (const NormalizedColor& _nc2)
+        inline Float& operator[](size_t _index)
         {
-            *this = *this + _nc2;
+            return _rgba[_index];
+        }
+        inline Float operator[](size_t _index) const
+        {
+            return _rgba[_index];
+        }
+        inline NormalizedColor& operator+= (const NormalizedColor& _nc2)
+        {
+            (*this)[0] += _nc2[0];
+            (*this)[1] += _nc2[1];
+            (*this)[2] += _nc2[2];
+            (*this)[3] += _nc2[3];
             return *this;
         }
-        NormalizedColor& operator*= (Float _factor)
+        inline NormalizedColor& operator*= (Float _factor)
         {
-            *this = *this * _factor;
+            (*this)[0] *= _factor;
+            (*this)[1] *= _factor;
+            (*this)[2] *= _factor;
+            (*this)[3] *= _factor;
             return *this;
         }
-        friend NormalizedColor operator+ (const NormalizedColor& _nc1, const NormalizedColor& _nc2)
+        inline friend NormalizedColor operator+ (NormalizedColor _nc1, const NormalizedColor& _nc2)
         {
-            return Eigen::Matrix<Float, 4, 1>(_nc1.Eigen::Matrix<Float, 4, 1>::operator+(_nc2));
+            return _nc1 += _nc2;
         }
-        friend NormalizedColor operator* (const NormalizedColor& _nc, Float _factor)
-        {
-            return Eigen::Matrix<Float, 4, 1>(_nc.Eigen::Matrix<Float, 4, 1>::operator*(_factor));
+        inline friend NormalizedColor operator* (NormalizedColor _nc, Float _factor)
+        { 
+            return _nc *= _factor;
         }
-        friend NormalizedColor operator* (Float _factor, const NormalizedColor& _nc)
+        inline friend NormalizedColor operator* (Float _factor, NormalizedColor _nc)
         {
-            return Eigen::Matrix<Float, 4, 1>(_nc.Eigen::Matrix<Float, 4, 1>::operator*(_factor));
+            return _nc *= _factor;
         }
     protected:
-        NormalizedColor(Eigen::Matrix<Float, 4, 1>&& _matrix) : Matrix(std::move(_matrix)) {}
+        Float _rgba[4];
     };
 
     class GraphObj3D;
     class Triangle3D;
     using PxCoordinate = Eigen::Matrix<int, 2, 1>;
     using ViewportCoordinate = Eigen::Matrix<Float, 2, 1>;
-    using DepthBuffer = std::vector<Float>;
-    using ReferenceBuffer = std::vector<GraphObj3D const*>;
+    class DepthBuffer : public std::vector<Float>
+    {
+    public:
+        template <typename... _Args>
+        DepthBuffer(_Args&&... _args) : std::vector<Float>(_args...) {}
+        void clear()
+        {
+            std::fill(begin(), end(), -1);
+        }
+    };
+    class ReferenceBuffer : public std::vector<GraphObj3D const*>
+    {
+    public:
+        template <typename... _Args>
+        ReferenceBuffer(_Args&&... _args) : std::vector<GraphObj3D const*>(_args...) {}
+        void clear()
+        {
+            std::fill(begin(), end(), nullptr);
+        }
+    };
+    class OverwriteMask : public std::vector<bool>
+    {
+    public:
+        template <typename... _Args>
+        OverwriteMask(_Args&&... _args) : std::vector<bool>(_args...) {}
+        void clear()
+        {
+            std::fill(begin(), end(), false);
+        }
+    };
 
     class NormalizedColorMap
     {
@@ -96,12 +137,16 @@ namespace lightroom
         {
             return _size[1];
         }
+        void clear()
+        {
+            std::fill(_data.begin(), _data.end(), NormalizedColor{ 0,0,0,1 });
+        }
     };
 
     class Viewport
     {
     public:
-        Viewport(LPRECT lpRect = nullptr, const NormalizedColor& _backgroundColor = {0,0,1,1}, const int _flag = EW_SHOWCONSOLE)
+        Viewport(LPRECT lpRect = nullptr, const NormalizedColor& _backgroundColor = {0,0,0,1}, const int _flag = EW_SHOWCONSOLE)
         {
             SetProcessDpiAwareness(PROCESS_SYSTEM_DPI_AWARE);
             int max_w = GetSystemMetrics(SM_CXSCREEN);
@@ -161,13 +206,13 @@ namespace lightroom
         {
             return _height;
         }
-        void print(const NormalizedColorMap& _ncm, IMAGE* _outDevice = NULL) const
+        void print(const NormalizedColorMap& _ncm, const OverwriteMask& _mask, IMAGE* _outDevice = NULL) const
         {
             auto _imgBuffer = GetImageBuffer(_outDevice);
             for (size_t _i = 0; _i < static_cast<size_t>(_width) * _height; _i++)
             {
-                auto _alpha = max(min(_ncm[_i][3], 1), 0);
-                _imgBuffer[_i] = _ncm[_i].toRGBColor();
+                _imgBuffer[_i] =
+                    (_mask[_i] == false) ? background[_i].toRGBColor() : _ncm[_i].toRGBColor();
             }
             FlushBatchDraw();
         }
@@ -244,6 +289,7 @@ namespace lightroom
     {
     public:
         virtual void draw(NormalizedColorMap&, 
+                          OverwriteMask&,
                           std::unordered_map<const Vertex3D*, Vertex3D>&,
                           DepthBuffer&,
                           ReferenceBuffer&) const = 0;
@@ -268,6 +314,7 @@ namespace lightroom
         }
         virtual void draw(
             NormalizedColorMap& _ncm,
+            OverwriteMask& _mask,
             std::unordered_map<const Vertex3D*, Vertex3D>& _vertexsOut,
             DepthBuffer& _depthBuffer,
             ReferenceBuffer& _refBuffer) const override
@@ -313,7 +360,7 @@ namespace lightroom
                     {
                         continue;
                     }
-                    _evaluateColorAndDepth(_x, _y, _beta, _gamma, _vertexsOut, _ncm, _depthBuffer, _refBuffer);
+                    _evaluateColorAndDepth(_x, _y, _beta, _gamma, _vertexsOut, _ncm, _mask, _depthBuffer, _refBuffer);
                 }
             }
         }
@@ -323,7 +370,7 @@ namespace lightroom
             int _x, int _y,
             Float _beta, Float _gamma,
             std::unordered_map<const Vertex3D*, Vertex3D>& _vertexsOut,
-            NormalizedColorMap& _ncm,
+            NormalizedColorMap& _ncm, OverwriteMask& _mask,
             DepthBuffer& _depthBuffer,
             ReferenceBuffer& _refBuffer) const
         {
@@ -340,7 +387,7 @@ namespace lightroom
             }
             _depthBuffer[_index] = _depth;
             _refBuffer[_index] = this;
-
+            _mask[_index] = true;
             _ncm[_index] = NormalizedColor {
                 _vertexsOut[_vertexs[0]].color * _alpha +
                 _vertexsOut[_vertexs[1]].color * _beta +

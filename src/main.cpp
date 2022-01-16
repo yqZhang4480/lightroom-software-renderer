@@ -18,7 +18,10 @@ int main(int argc, char* argv[])
         tm.rotate(0, 0, 128);
         pm.render();
         cp->apply(tm.getTransformMatrix());
+
+        if (GetAsyncKeyState('Q'))
+        {
+            return 0;
+        }
     }
-    
-    getchar();
 }
