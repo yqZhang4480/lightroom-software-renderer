@@ -22,9 +22,9 @@ namespace lightroom
 
         explicit operator COLORREF() const
         {
-            auto r = static_cast<uint8_t>(((*this)[0] * 256) <= 255 ? ((*this)[0] * 256) : 255);
-            auto g = static_cast<uint8_t>(((*this)[1] * 256) <= 255 ? ((*this)[1] * 256) : 255);
-            auto b = static_cast<uint8_t>(((*this)[2] * 256) <= 255 ? ((*this)[2] * 256) : 255);
+            auto r = static_cast<uint8_t>((_rgba[0] * 256) <= 255 ? (_rgba[0] * 256) : 255);
+            auto g = static_cast<uint8_t>((_rgba[1] * 256) <= 255 ? (_rgba[1] * 256) : 255);
+            auto b = static_cast<uint8_t>((_rgba[2] * 256) <= 255 ? (_rgba[2] * 256) : 255);
             return b | (((uint16_t)g) << 8) | (((uint32_t)r) << 16);
         }
         COLORREF toRGBColor() const
@@ -42,18 +42,18 @@ namespace lightroom
         }
         inline NormalizedColor& operator+= (const NormalizedColor& _nc2)
         {
-            (*this)[0] += _nc2[0];
-            (*this)[1] += _nc2[1];
-            (*this)[2] += _nc2[2];
-            (*this)[3] += _nc2[3];
+            _rgba[0] += _nc2._rgba[0];
+            _rgba[1] += _nc2._rgba[1];
+            _rgba[2] += _nc2._rgba[2];
+            _rgba[3] += _nc2._rgba[3];
             return *this;
         }
         inline NormalizedColor& operator*= (Float _factor)
         {
-            (*this)[0] *= _factor;
-            (*this)[1] *= _factor;
-            (*this)[2] *= _factor;
-            (*this)[3] *= _factor;
+            _rgba[0] *= _factor;
+            _rgba[1] *= _factor;
+            _rgba[2] *= _factor;
+            _rgba[3] *= _factor;
             return *this;
         }
         inline friend NormalizedColor operator+ (NormalizedColor _nc1, const NormalizedColor& _nc2)
@@ -295,6 +295,166 @@ namespace lightroom
                           ReferenceBuffer&) const = 0;
         virtual ~GraphObj3D() {}
     };
+    class Line3D : public GraphObj3D
+    {
+        std::array<Vertex3D*, 2> _vertexs;
+    public:
+        Line3D(const std::array<Vertex3D*, 2>& _v) : _vertexs(_v) {}
+        virtual ~Line3D() {}
+        inline bool isVaild() const
+        {
+            return _vertexs[0] != nullptr && _vertexs[1] != nullptr;
+        }
+
+        virtual void draw(
+            NormalizedColorMap& _ncm,
+            OverwriteMask& _mask,
+            std::unordered_map<const Vertex3D*, Vertex3D>& _vertexsOut,
+            DepthBuffer& _depthBuffer,
+            ReferenceBuffer& _refBuffer) const override
+        {
+            auto& _p0 = _vertexsOut[_vertexs[0]].position;
+            auto& _p1 = _vertexsOut[_vertexs[1]].position;
+            int _x0 = _p0[0],
+                _y0 = _p0[1],
+                _x1 = _p1[0],
+                _y1 = _p1[1];
+            int _y1_y0 = _y1 - _y0,
+                _x1_x0 = _x1 - _x0;
+            int _x_min = max(0, min(_x0, _x1)),
+                _x_max = min(_ncm.getWidth(), max(_x0, _x1)),
+                _y_min = max(0, min(_y0, _y1)),
+                _y_max = min(_ncm.getHeight(), max(_y0, _y1));
+            int _x = _x0,
+                _y = _y0;
+            Float k = Float(_y1_y0) / _x1_x0;
+
+            if (k <= -1)
+            {
+                Float d = _lineFunction(_x + 0.5, _y - 1, _vertexsOut);
+                for (; _y >= _y_min; _y--)
+                {
+                    if (_y >= 0 && _y < _ncm.getHeight() &&
+                        _x >= 0 && _x < _ncm.getWidth())
+                    {
+                        _evaluateColorAndDepth(_x, _x0, _y, _y0, _x1_x0, _y1_y0, _vertexsOut, _ncm, _mask, _depthBuffer, _refBuffer);
+                    }
+                    if (d < 0)
+                    {
+                        _x++;
+                        d += -_x1_x0 - _y1_y0;
+                    }
+                    else
+                    {
+                        d += -_x1_x0;
+                    }
+                }
+            }
+            else if (k <= 0)
+            {
+                Float d = _lineFunction(_x + 1, _y - 0.5, _vertexsOut);
+                for (; _x <= _x_max; _x++)
+                {
+                    if (_y >= 0 && _y < _ncm.getHeight() &&
+                        _x >= 0 && _x < _ncm.getWidth())
+                    {
+                        _evaluateColorAndDepth(_x, _x0, _y, _y0, _x1_x0, _y1_y0, _vertexsOut, _ncm, _mask, _depthBuffer, _refBuffer);
+                    }
+                    if (d > 0)
+                    {
+                        _y--;
+                        d += -_x1_x0 - _y1_y0;
+                    }
+                    else
+                    {
+                        d += -_y1_y0;
+                    }
+                }
+            }
+            else if (k <= 1)
+            {
+                Float d = _lineFunction(_x + 1, _y + 0.5, _vertexsOut);
+                for (; _x <= _x_max; _x++)
+                {
+                    if (_y >= 0 && _y < _ncm.getHeight() &&
+                        _x >= 0 && _x < _ncm.getWidth())
+                    {
+                        _evaluateColorAndDepth(_x, _x0, _y, _y0, _x1_x0, _y1_y0, _vertexsOut, _ncm, _mask, _depthBuffer, _refBuffer);
+                    }
+                    if (d < 0)
+                    {
+                        _y++;
+                        d += _x1_x0 - _y1_y0;
+                    }
+                    else
+                    {
+                        d += -_y1_y0;
+                    }
+                }
+            }
+            else if (k > 1)
+            {
+                Float d = _lineFunction(_x + 0.5, _y + 1, _vertexsOut);
+                for (; _y <= _y_max; _y++)
+                {
+                    if (_y >= 0 && _y < _ncm.getHeight() &&
+                        _x >= 0 && _x < _ncm.getWidth())
+                    {
+                        _evaluateColorAndDepth(_x, _x0, _y, _y0, _x1_x0, _y1_y0, _vertexsOut, _ncm, _mask, _depthBuffer, _refBuffer);
+                    }
+                    if (d > 0)
+                    {
+                        _x++;
+                        d += _x1_x0 - _y1_y0;
+                    }
+                    else
+                    {
+                        d += _x1_x0;
+                    }
+                }
+            }
+        }
+
+        protected:
+            inline Float _lineFunction(
+                Float _x, Float _y,
+                std::unordered_map<const Vertex3D*, Vertex3D>& _vertexsOut) const
+            {
+                auto& _p0 = _vertexsOut[_vertexs[0]].position;
+                auto& _p1 = _vertexsOut[_vertexs[1]].position;
+                int _x0 = _p0[0],
+                    _y0 = _p0[1],
+                    _x1 = _p1[0],
+                    _y1 = _p1[1];
+                return (_x1 - _x0) * _y - (_y1 - _y0) * _x - _x1 * _y0 + _x0 * _y1;
+            }
+            inline void _evaluateColorAndDepth(
+                int _x, int _x0,
+                int _y, int _y0,
+                int _x1_x0, int _y1_y0,
+                std::unordered_map<const Vertex3D*, Vertex3D>& _vertexsOut,
+                NormalizedColorMap& _ncm, OverwriteMask& _mask,
+                DepthBuffer& _depthBuffer,
+                ReferenceBuffer& _refBuffer) const
+            {
+                int _index = _y * _ncm.getWidth() + _x;
+                Float _t = sqrt((Float)((_x - _x0) * (_x - _x0) + (_y - _y0) * (_y - _y0)) /
+                               (_x1_x0 * _x1_x0 + _y1_y0 * _y1_y0));
+                Float _depth = _vertexsOut[_vertexs[0]].position[2] * (1 - _t) +
+                    _vertexsOut[_vertexs[1]].position[2] * _t;
+
+                if (_depth <= _depthBuffer[_index])
+                {
+                    return;
+                }
+                _depthBuffer[_index] = _depth;
+                _refBuffer[_index] = this;
+                _mask[_index] = true;
+                _ncm[_index] = NormalizedColor{
+                    _vertexsOut[_vertexs[0]].color * (1 - _t) +
+                    _vertexsOut[_vertexs[1]].color * _t };
+            }
+    };
     class Triangle3D : public GraphObj3D
     {
     protected:
@@ -374,7 +534,6 @@ namespace lightroom
             DepthBuffer& _depthBuffer,
             ReferenceBuffer& _refBuffer) const
         {
-            
             Float _alpha = 1 - _beta - _gamma;
             int _index = _y * _ncm.getWidth() + _x;
             Float _depth = _vertexsOut[_vertexs[0]].position[2] * _alpha +

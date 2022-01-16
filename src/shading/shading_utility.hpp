@@ -71,20 +71,17 @@ namespace lightroom
             _vertexsOut.insert({ _ret, *_ret });
             return _ret;
         }
-        template <typename... _Args>
-        GraphObj3D* addGraphObject(GraphObjType _type, _Args&&... _args)
+        template <GraphObjType _GRAPH_OBJ_TYPE, typename... _Args>
+        GraphObj3D* addGraphObject(_Args&&... _args)
         {
-            switch (_type)
+            if constexpr (_GRAPH_OBJ_TYPE == lightroom::GraphObjType::LINE)
             {
-                case lightroom::GraphObjType::LINE:
-                    break;
-                case lightroom::GraphObjType::TRIANGLE:
-                    _graphObjects.push_back(new Triangle3D(_args...));
-                    break;
-                default:
-                    break;
+                _graphObjects.push_back(new Line3D(_args...));
             }
-
+            else if (_GRAPH_OBJ_TYPE == lightroom::GraphObjType::TRIANGLE)
+            {
+                _graphObjects.push_back(new Triangle3D(_args...));
+            }
             return _graphObjects.back();
         }
         template <typename... _Args>
