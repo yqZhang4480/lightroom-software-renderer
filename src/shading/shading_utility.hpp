@@ -135,7 +135,7 @@ namespace lightroom
         {
             for (auto& _p : _vertexsOut)
             {
-                _p.second.color = _ambient;
+                //_p.second.color = _ambient;
             }
         }
         inline void _vertexDiffuseShade()
@@ -147,7 +147,7 @@ namespace lightroom
                     auto& _v = _p.second;
                     Vector<3> _l = _pl.vertex->position.toOrdinaryCoordinate() - _v.position.toOrdinaryCoordinate();
                     Float _diffuse = std::max<Float>(Float(0), -_v.normal.toOrdinaryCoordinate().dot(_l.normalized()));
-                    _v.color += _pl.vertex->color * _diffuse;
+                    //_v.color += _pl.vertex->color * _diffuse;
                 }
             }
         }
