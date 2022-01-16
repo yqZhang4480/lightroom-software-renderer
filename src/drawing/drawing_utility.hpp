@@ -7,7 +7,7 @@
 
 namespace lightroom
 {
-    class NormalizedColor : protected Eigen::Matrix<Float, 4, 1>
+    class NormalizedColor : public Eigen::Matrix<Float, 4, 1>
     {
     public:
         NormalizedColor() : Matrix{ 0,0,0,1 } {}
@@ -32,6 +32,7 @@ namespace lightroom
             return static_cast<COLORREF>(*this);
         }
 
+        using Eigen::Matrix<Float, 4, 1>::operator[];
         NormalizedColor& operator+= (const NormalizedColor& _nc2)
         {
             *this = *this + _nc2;
@@ -71,8 +72,8 @@ namespace lightroom
         PxCoordinate _size;
         std::vector<NormalizedColor> _data;
     public:
-        NormalizedColorMap(const PxCoordinate& _size = { 0,0 }, const NormalizedColor& _color = { 0,0,0,1 }) :
-            _data(_size[0] * _size[1])
+        NormalizedColorMap(const PxCoordinate& __size = { 0,0 }, const NormalizedColor& _color = { 0,0,0,1 }) :
+            _size(__size), _data(__size[0] * __size[1])
         {
             for (auto& _d : _data)
             {
@@ -100,7 +101,7 @@ namespace lightroom
     class Viewport
     {
     public:
-        Viewport(LPRECT lpRect = nullptr, const NormalizedColor& _backgroundColor = {}, const int _flag = 0)
+        Viewport(LPRECT lpRect = nullptr, const NormalizedColor& _backgroundColor = {0,0,1,1}, const int _flag = EW_SHOWCONSOLE)
         {
             SetProcessDpiAwareness(PROCESS_SYSTEM_DPI_AWARE);
             int max_w = GetSystemMetrics(SM_CXSCREEN);
@@ -165,6 +166,7 @@ namespace lightroom
             auto _imgBuffer = GetImageBuffer(_outDevice);
             for (size_t _i = 0; _i < static_cast<size_t>(_width) * _height; _i++)
             {
+                auto _alpha = max(min(_ncm[_i][3], 1), 0);
                 _imgBuffer[_i] = _ncm[_i].toRGBColor();
             }
             FlushBatchDraw();
@@ -219,7 +221,7 @@ namespace lightroom
         Vertex3D(
             const Homogeneous<4>& position = Homogeneous<4>(Vector<3>{ 0, 0, 0 }),
             const Homogeneous<4>& normal = Homogeneous<4>(Vector<3>{ 0, 0, 0 }),
-            const NormalizedColor& color = { 0, 0, 0 }) :
+            const NormalizedColor& color = { 0, 0, 0, 1 }) :
             position(position), color(color), normal(normal) {}
 
         Vertex3D& apply(const Matrix<4>& _transformMatrix)
@@ -242,7 +244,7 @@ namespace lightroom
     {
     public:
         virtual void draw(NormalizedColorMap&, 
-                          std::unordered_map<const Vertex3D*, Vertex3D>,
+                          std::unordered_map<const Vertex3D*, Vertex3D>&,
                           DepthBuffer&,
                           ReferenceBuffer&) const = 0;
         virtual ~GraphObj3D() {}
@@ -266,7 +268,7 @@ namespace lightroom
         }
         virtual void draw(
             NormalizedColorMap& _ncm,
-            std::unordered_map<const Vertex3D*, Vertex3D> _vertexsOut,
+            std::unordered_map<const Vertex3D*, Vertex3D>& _vertexsOut,
             DepthBuffer& _depthBuffer,
             ReferenceBuffer& _refBuffer) const override
         {
@@ -311,7 +313,7 @@ namespace lightroom
                     {
                         continue;
                     }
-                    _evaluateColorAndDepth(_x, _y, _beta, _gamma, _ncm, _depthBuffer, _refBuffer);
+                    _evaluateColorAndDepth(_x, _y, _beta, _gamma, _vertexsOut, _ncm, _depthBuffer, _refBuffer);
                 }
             }
         }
@@ -320,15 +322,17 @@ namespace lightroom
         inline void _evaluateColorAndDepth(
             int _x, int _y,
             Float _beta, Float _gamma,
+            std::unordered_map<const Vertex3D*, Vertex3D>& _vertexsOut,
             NormalizedColorMap& _ncm,
             DepthBuffer& _depthBuffer,
             ReferenceBuffer& _refBuffer) const
         {
+            
             Float _alpha = 1 - _beta - _gamma;
             int _index = _y * _ncm.getWidth() + _x;
-            Float _depth = _vertexs[0]->position[2] * _alpha +
-                _vertexs[1]->position[2] * _beta +
-                _vertexs[2]->position[2] * _gamma;
+            Float _depth = _vertexsOut[_vertexs[0]].position[2] * _alpha +
+                _vertexsOut[_vertexs[1]].position[2] * _beta +
+                _vertexsOut[_vertexs[2]].position[2] * _gamma;
 
             if (_depth <= _depthBuffer[_index])
             {
@@ -338,9 +342,9 @@ namespace lightroom
             _refBuffer[_index] = this;
 
             _ncm[_index] = NormalizedColor {
-                _vertexs[0]->color * _alpha +
-                _vertexs[1]->color * _beta +
-                _vertexs[2]->color * _gamma };
+                _vertexsOut[_vertexs[0]].color * _alpha +
+                _vertexsOut[_vertexs[1]].color * _beta +
+                _vertexsOut[_vertexs[2]].color * _gamma };
         }
     };
 

@@ -7,18 +7,14 @@ namespace lightroom
     class TransformMixer3D : protected Matrix<4>
     {
     public:
-        using lightroom::Matrix<4>::operator=;
         TransformMixer3D() : Matrix()
         {
             *this = this->Identity();
         }
-        operator const lightroom::Matrix<4>&() const
-        {
-            return *static_cast<const lightroom::Matrix<4>*>(this);
-        }
+        using lightroom::Matrix<4>::operator=;
         const lightroom::Matrix<4>& getTransformMatrix() const
         {
-            return *this;
+            return *static_cast<const lightroom::Matrix<4>*>(this);
         }
 
         inline TransformMixer3D& scale(Float _factorX, Float _factorY, Float  _factorZ)
@@ -65,9 +61,11 @@ namespace lightroom
             return apply(_lpm);
         }
         inline TransformMixer3D& changeBase(
-            const Vector<3>& _originPoint,
-            const Vector<3>& _axisU, const Vector<3>& _axisV, const Vector<3>& _axisW)
+            const Vector<3>& _originPoint, Vector<3> _axisU, Vector<3> _axisV, Vector<3> _axisW)
         {
+            _axisU.normalize();
+            _axisV.normalize();
+            _axisW.normalize();
             lightroom::Matrix<4> _rotate;
             _rotate <<
                 _axisU[0], _axisU[1], _axisU[2], 0,

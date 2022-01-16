@@ -14,16 +14,21 @@ namespace lightroom
         }
         Homogeneous(const Vector<_N>& _homogeneousCoordinate) : Vector<_N>(_homogeneousCoordinate) {}
 
+        inline void divide()
+        {
+            *this /= (*this)[_N - 1];
+        }
         Vector<_N - 1> toOrdinaryCoordinate()
         {
             Vector<_N - 1> _ret;
             if ((*this)[_N - 1] != 0)
             {
-                *this /= (*this)[_N - 1];
+                divide();
             }
             _overwrite_vector<_N, _N - 1>(*this, _ret);
             return _ret;
         }
+        using Vector<_N>::operator=;
 
     private:
         template <size_t _SRC_SIZE, size_t _DST_SIZE>

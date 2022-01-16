@@ -60,7 +60,6 @@
 #include <unordered_map>
 #endif // !_unordered_map_
 
-
 #ifndef _ShellScalingApi_H_
 #define _ShellScalingApi_H_
 #include <ShellScalingApi.h>
@@ -76,7 +75,7 @@ namespace lightroom
     using Float = double;
 
     using Angle = uint16_t;
-    constexpr const Angle AngleAsDegree[360] =
+    constexpr const Angle AngleOfDegrees[360] =
     {
         0,
         182,  364,  546,  728,  910,  1092, 1274, 1456, 1638, 1820,

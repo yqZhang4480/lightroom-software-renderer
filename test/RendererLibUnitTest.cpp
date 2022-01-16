@@ -112,9 +112,70 @@ namespace 功能接口测试
         }
     };
 
-    TEST_CLASS(B_变换叠加器)
+    TEST_CLASS(B_3D变换叠加器)
     {
-        TEST_METHOD(A_赋值运算符)
+        TEST_METHOD(A_构造函数与类型转换)
+        {
+            auto tm = TransformMixer3D();
+            Matrix<4> expected;
+            expected <<
+                1, 0, 0, 0,
+                0, 1, 0, 0,
+                0, 0, 1, 0,
+                0, 0, 0, 1;
+
+            Assert::AreEqual(expected, tm.getTransformMatrix());
+        }
+        TEST_METHOD(B_平移变换)
+        {
+            auto hv = Homogeneous<4>(Vector<4>{ 1,2,3,1 });
+            auto tm = TransformMixer3D();
+            hv = tm.translate(3, -2, 1).getTransformMatrix() * hv;
+            
+            Matrix<4> expected;
+            expected <<
+                1, 0, 0, 3,
+                0, 1, 0, -2,
+                0, 0, 1, 1,
+                0, 0, 0, 1;
+            
+            Assert::AreEqual(expected, tm.getTransformMatrix());
+            Assert::AreEqual(Vector<3>{ 4,0,4 }, hv.toOrdinaryCoordinate());
+        }
+        TEST_METHOD(C_缩放变换)
+        {
+            auto hv = Homogeneous<4>(Vector<4>{ 1, 2, 3, 1 });
+            auto tm = TransformMixer3D();
+            hv = tm.scale(3, -2, 1).getTransformMatrix() * hv;
+
+            Matrix<4> expected;
+            expected <<
+                3, 0, 0, 0,
+                0, -2, 0, 0,
+                0, 0, 1, 0,
+                0, 0, 0, 1;
+
+            Assert::AreEqual(expected, tm.getTransformMatrix());
+            Assert::AreEqual(Vector<3>{ 3, -4, 3 }, hv.toOrdinaryCoordinate());
+        }
+        TEST_METHOD(D_旋转变换)
+        {
+            auto hv = Homogeneous<4>(Vector<4>{ 1,2,3,1 });
+            auto tm = TransformMixer3D(); 
+            hv = tm.rotate(AngleOfDegrees[90], 0, 0)
+                .getTransformMatrix() * hv;
+
+            Matrix<4> expected;
+            expected <<
+                3, 0, 0, 0,
+                0, -2, 0, 0,
+                0, 0, 1, 0,
+                0, 0, 0, 1;
+
+            //Assert::AreEqual(expected, tm.getTransformMatrix());
+            Assert::AreEqual(Vector<3>{ 1,-3,2 }, hv.toOrdinaryCoordinate());
+        }
+        TEST_METHOD(Z_赋值运算符)
         {
 
         }

@@ -17,12 +17,12 @@ namespace lightroom
 
     struct Camara
     {
-        Vector<3> position;
+        Vertex3D* position;
         Vector<3> gazeDirection;
         Vector<3> topDirection;
         Angle fov;
 
-        Camara(const Vector<3>& _position, const Vector<3>& _gazeDirection, const Vector<3>& _topDirection, Angle _fov) :
+        Camara(Vertex3D* _position, const Vector<3>& _gazeDirection, const Vector<3>& _topDirection, Angle _fov) :
             position(_position), gazeDirection(_gazeDirection), topDirection(_topDirection), fov(_fov) {}
     };
 
@@ -31,7 +31,7 @@ namespace lightroom
     public:
         PipelineManager()
         {
-            _ncm = NormalizedColorMap({ _viewport.getWidth(), _viewport.getHeight() });
+
         }
         ~PipelineManager()
         {
@@ -48,8 +48,10 @@ namespace lightroom
 
         void render()
         {
+            _prepare();
             _vertexsShade();
             _mvpTransform();
+            _perspectiveDivision();
             _viewportTransform();
             for (auto _graphObj : _graphObjects)
             {
@@ -114,12 +116,15 @@ namespace lightroom
 
         inline void _vertexsShade()
         {
-            _prepareOut();
             _vertexAmbientShade();
             _vertexDiffuseShade();
         }
-        inline void _prepareOut()
+        inline void _prepare()
         {
+            _ncm = NormalizedColorMap({ _viewport.getWidth(), _viewport.getHeight() });
+            _refBuffer = ReferenceBuffer(_viewport.getWidth() * _viewport.getHeight(), nullptr);
+            _depthBuffer = DepthBuffer(_viewport.getWidth() * _viewport.getHeight(), -1);
+
             _vertexsOut.clear();
 
             const auto _end = _vertexsIn.cend();
@@ -142,7 +147,7 @@ namespace lightroom
                 for (auto& _p : _vertexsOut)
                 {
                     auto& _v = _p.second;
-                    auto _l = _pl.vertex->position.toOrdinaryCoordinate() - _v.position.toOrdinaryCoordinate();
+                    Vector<3> _l = _pl.vertex->position.toOrdinaryCoordinate() - _v.position.toOrdinaryCoordinate();
                     Float _diffuse = std::max<Float>(Float(0), -_v.normal.toOrdinaryCoordinate().dot(_l.normalized()));
                     _v.color += _pl.vertex->color * _diffuse;
                 }
@@ -156,7 +161,7 @@ namespace lightroom
 
             constexpr const Float _r = 1;
             constexpr const Float _t = 1;
-            constexpr const Float _f = 10000;
+            constexpr const Float _f = -10000;
             Float _n = -_r * cos(_camara.fov / 2) / sin(_camara.fov / 2);
             Matrix<4> _perspective, _ortho;
             _perspective <<
@@ -171,7 +176,7 @@ namespace lightroom
                 0, 0, 0, Float(1);
 
             _tm.changeBase(
-                _camara.position,
+                _camara.position->position.toOrdinaryCoordinate(),
                 _camara.topDirection.cross(-_camara.gazeDirection),
                 _camara.topDirection,
                 -_camara.gazeDirection)
@@ -183,12 +188,18 @@ namespace lightroom
                 _p.second.apply(_tm.getTransformMatrix());
             }
         }
-
+        inline void _perspectiveDivision()
+        {
+            for (auto& _p : _vertexsOut)
+            {
+                _p.second.position.divide();
+            }
+        }
         inline void _viewportTransform()
         {
             TransformMixer3D _tm;
             _tm.scale(_viewport.getWidth() / 2.0, -_viewport.getHeight() / 2.0, 1)
-                .translate((_viewport.getWidth() - 1) / 2, (_viewport.getHeight() - 1) / 2, 0);
+                .translate((_viewport.getWidth() - 1.0) / 2, (_viewport.getHeight() - 1.0) / 2, 0);
 
             for (auto& _p : _vertexsOut)
             {
