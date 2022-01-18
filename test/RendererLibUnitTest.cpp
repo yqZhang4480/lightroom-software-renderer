@@ -91,15 +91,15 @@ namespace 功能接口测试
         {
             auto v = Vector<3>(1, 2, 3);
             auto h1 = Homogeneous<4>(v);
-            Assert::AreEqual(v, h1.toOrdinaryCoordinate());
+            Assert::AreEqual(v, h1.toOrdinary());
 
             auto v2 = Vector<4>(3, 6, 9, 3);
             auto h2 = Homogeneous<4>(v2);
-            Assert::AreEqual(v, h2.toOrdinaryCoordinate());
+            Assert::AreEqual(v, h2.toOrdinary());
 
             auto v0 = Vector<4>(1, 2, 3, 0);
             auto h3 = Homogeneous<4>(v0);
-            Assert::AreEqual(v, h3.toOrdinaryCoordinate());
+            Assert::AreEqual(v, h3.toOrdinary());
 
         }
         TEST_METHOD(D_赋值运算符)
@@ -140,7 +140,7 @@ namespace 功能接口测试
                 0, 0, 0, 1;
             
             Assert::AreEqual(expected, tm.getTransformMatrix());
-            Assert::AreEqual(Vector<3>{ 4,0,4 }, hv.toOrdinaryCoordinate());
+            Assert::AreEqual(Vector<3>{ 4,0,4 }, hv.toOrdinary());
         }
         TEST_METHOD(C_缩放变换)
         {
@@ -156,7 +156,7 @@ namespace 功能接口测试
                 0, 0, 0, 1;
 
             Assert::AreEqual(expected, tm.getTransformMatrix());
-            Assert::AreEqual(Vector<3>{ 3, -4, 3 }, hv.toOrdinaryCoordinate());
+            Assert::AreEqual(Vector<3>{ 3, -4, 3 }, hv.toOrdinary());
         }
         TEST_METHOD(D_旋转变换)
         {
@@ -173,7 +173,7 @@ namespace 功能接口测试
                 0, 0, 0, 1;
 
             //Assert::AreEqual(expected, tm.getTransformMatrix());
-            Assert::AreEqual(Vector<3>{ 1,-3,2 }, hv.toOrdinaryCoordinate());
+            Assert::AreEqual(Vector<3>{ 1,-3,2 }, hv.toOrdinary());
         }
         TEST_METHOD(Z_赋值运算符)
         {

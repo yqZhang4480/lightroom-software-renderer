@@ -18,7 +18,7 @@ namespace lightroom
         {
             *this /= (*this)[_N - 1];
         }
-        Vector<_N - 1> toOrdinaryCoordinate()
+        Vector<_N - 1> toOrdinary()
         {
             Vector<_N - 1> _ret;
             if ((*this)[_N - 1] != 0)

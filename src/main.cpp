@@ -27,20 +27,27 @@ double lockFps(LockArgs& LockArgs)
 
 int main(int argc, char* argv[])
 {
+    //auto tp = Homogeneous<4>(Vector<3>(0, 0, 20));
     PipelineManager pm;
-    auto tp = Vertex3DIn(Vector<3>(0, 0, 20));
-    pm.useCamara(pm.addCamara(Vector<3>{ 100, 0, 0 }, Vector<3>{ -100, 0, 0 }, Vector<3>{ 0, 0, 1 }, AngleOfDegrees[78]));
-    pm.addGraphObject(GraphObjType::TRIANGLE_FAN, {
-            Vector<3>(0, -10, -10), Vector<3>(0, 0, 20), Vector<3>(0, 10, -10)
-    });
-    pm.addPointLight(Vector<3>(100, 0, 0), NormalizedColor(1, 1, 0.5));
+
 
     LARGE_INTEGER timers[2]{}, perfFreq{ 0 };
     QueryPerformanceFrequency(&perfFreq);
     int lockFPS = 200;
     LockArgs lockArgs{ 0, lockFPS, timers, perfFreq };
+    auto texture = new ImageMap(L".\\test.png", PxCoordinate{ 1000, 1000 });
     while (true)
     {
+        pm.clear();
+        pm.useCamara(pm.addCamara(Vector<3>{ 100, 0, 0 }, Vector<3>{ -100, 0, 0 }, Vector<3>{ 0, 0, 1 }, AngleOfDegrees[78]));
+        pm.addGraphObject(PrimitiveType::TRIANGLE_FAN, {
+            {Vector<3>(30, -25, -20), PxCoordinate(0, 1000)},
+            {Vector<3>(30,  25, -20), PxCoordinate(1000, 1000)},
+            {Vector<3>( 0,  25,  20), PxCoordinate(1000, 0)},
+            {Vector<3>( 0, -25,  20), PxCoordinate(0, 0)}},
+            texture);
+        pm.addPointLight(Vector<3>(100, 0, 0), Color(1, 1, 0.5));
+
         if (GetAsyncKeyState(VK_F4))
         {
             return 0;
@@ -50,10 +57,10 @@ int main(int argc, char* argv[])
 
         cout << "FPS: " << (int)(1000 * perfFreq.QuadPart / deltapc) << " (lock: " << lockFPS << ")" << endl;
 
-        TransformMixer3D tm;
+        //TransformMixer3D tm;
         //tm.translate(0.5, 0, 0);
         pm.render();
-        //tp->apply(tm.getTransformMatrix());
+        //tp.apply(tm.getTransformMatrix());
 
     }
 }

@@ -10,11 +10,11 @@ namespace lightroom
     class PointLight
     {
     public:
-        PointLight(const Vector<3>& position, const NormalizedColor& color) :
+        PointLight(const Vector<3>& position, const Color& color) :
             position(position), color(color) {}
 
         Homogeneous<4> position;
-        NormalizedColor color;
+        Color color;
     };
 
     struct Camara
@@ -35,14 +35,21 @@ namespace lightroom
         using Vertex3DOutContainer = std::vector<Vertex3DOut>;
     public:
         PipelineManager() :
-            _ncm({ _viewport.getWidth(), _viewport.getHeight() }),
             _mask(_viewport.getWidth()* _viewport.getHeight(), false),
             _refBuffer(_viewport.getWidth() * _viewport.getHeight(), nullptr),
-            _depthBuffer(_viewport.getWidth() * _viewport.getHeight(), -1) {}
+            _depthBuffer(_viewport.getWidth() * _viewport.getHeight(), -1)
+        {
+            _colorMap = new SequenceMap(PxCoordinate{ _viewport.getWidth(), _viewport.getHeight() });
+        }
 
         void useCamara(size_t _camaraIndex)
         {
             this->_camaraIndex = _camaraIndex;
+        }
+        void clear()
+        {
+            _clearUserData();
+            _clearInternalData();
         }
 
         void render()
@@ -56,21 +63,24 @@ namespace lightroom
             _viewportTransform();
             for (auto _graphObj : _graphObjects)
             {
-                _graphObj->draw(_ncm, _mask, _depthBuffer, _refBuffer);
+                _graphObj->draw(_colorMap, _mask, _depthBuffer, _refBuffer);
             }
-            _viewport.print(_ncm, _mask);
+            _viewport.print(_colorMap, _mask);
         }
 
         std::pair<Vertex3DInContainer::iterator, Vertex3DInContainer::iterator>
-            addGraphObject(GraphObjType _objType, const std::vector<Vector<3>>& _positions)
+            addGraphObject(
+                PrimitiveType _objType,
+                const std::vector<std::pair<Vector<3>, PxCoordinate>>& _positionTexturePairs,
+                ColorMap* _texture)
         {
             auto _begin = _vertexIns.end();
-            for (auto& _v : _positions)
+            for (auto& _p : _positionTexturePairs)
             {
-                _vertexIns.emplace_back(_objType, _v);
+                _vertexIns.emplace_back(_objType, _p.first, _p.second, _texture);
             }
             auto _end = _vertexIns.end();
-            _vertexIns.emplace_back(GraphObjType::NONE, Homogeneous<4>(Vector<3>{ 0,0,0 }));
+            _vertexIns.emplace_back(PrimitiveType::NONE, Homogeneous<4>(Vector<3>{ 0,0,0 }), PxCoordinate(0,0), nullptr);
             return { _begin, _end };
         }
 
@@ -94,9 +104,9 @@ namespace lightroom
 
         Viewport _viewport;
         std::vector<Camara> _camaras;
-        NormalizedColor _ambient;
+        Color _ambient;
 
-        NormalizedColorMap _ncm;
+        WritableColorMap* _colorMap;
         OverwriteMask _mask;
         DepthBuffer _depthBuffer;
         ReferenceBuffer _refBuffer;
@@ -105,20 +115,31 @@ namespace lightroom
 
         inline void _prepare()
         {
-            _mask        .clear();
-            _refBuffer   .clear();
-            _depthBuffer .clear();
-            _vertexOuts  .clear();
+            _clearInternalData();
+
+            for (const auto& _v : _vertexIns)
+            {
+                _vertexOuts.emplace_back(_v.primitiveType, _v.position, _v.texturePosition, _v.texture);
+            }
+        }
+
+        void _clearUserData()
+        {
+            _vertexIns.clear();
+            _camaras.clear();
+            _pointLights.clear();
+        }
+        void _clearInternalData()
+        {
+            _mask.clear();
+            _refBuffer.clear();
+            _depthBuffer.clear();
+            _vertexOuts.clear();
             for (auto _go : _graphObjects)
             {
                 delete _go;
             }
             _graphObjects.clear();
-
-            for (const auto& _v : _vertexIns)
-            {
-                _vertexOuts.emplace_back(_v._graphObjType, _v.position);
-            }
         }
 
         void _assemble()
@@ -127,7 +148,7 @@ namespace lightroom
             auto _first = _vertexOuts.begin();
             for (auto _last = _vertexOuts.begin(); ++_last != _end;)
             {
-                if (_last->_graphObjType != _first->_graphObjType)
+                if (_last->primitiveType != _first->primitiveType)
                 {
                     _assembleDeliver(_first, _last);
                     _first = ++_last;
@@ -141,21 +162,21 @@ namespace lightroom
         void _assembleDeliver(
             Vertex3DOutContainer::iterator _begin, Vertex3DOutContainer::iterator _end)
         {
-            switch (_begin->_graphObjType)
+            switch (_begin->primitiveType)
             {
-                case lightroom::GraphObjType::LINES:
+                case lightroom::PrimitiveType::LINES:
                     _assembleLines(_begin, _end);
                     break;
-                case lightroom::GraphObjType::LINE_STRIP:
+                case lightroom::PrimitiveType::LINE_STRIP:
                     _assembleLineStrip(_begin, _end);
                     break;
-                case lightroom::GraphObjType::LINE_LOOP:
+                case lightroom::PrimitiveType::LINE_LOOP:
                     _assembleLineLoop(_begin, _end);
                     break;
-                case lightroom::GraphObjType::TRIANGLE_STRIP:
+                case lightroom::PrimitiveType::TRIANGLE_STRIP:
                     _assembleTriangleStrip(_begin, _end);
                     break;
-                case lightroom::GraphObjType::TRIANGLE_FAN:
+                case lightroom::PrimitiveType::TRIANGLE_FAN:
                     _assembleTriangleFan(_begin, _end);
                     break;
                 default:
@@ -266,8 +287,8 @@ namespace lightroom
                 for (auto& _v : _vertexOuts)
                 {
                     Vector<3> _l =
-                        _pl.position.toOrdinaryCoordinate() - _v.position.toOrdinaryCoordinate();
-                    Float _diffuse = abs(_v.normal.dot(_l.normalized()));
+                        _pl.position.toOrdinary() - _v.position.toOrdinary();
+                    Float _diffuse = std::max<Float>(Float(0), -_v.normal.dot(_l.normalized()));
                     _v.color += _pl.color * _diffuse;
                 }
             }
@@ -295,7 +316,7 @@ namespace lightroom
                 0, 0, 0, Float(1);
 
             _tm.changeBase(
-                _camara.position.toOrdinaryCoordinate(),
+                _camara.position.toOrdinary(),
                 _camara.topDirection.cross(-_camara.gazeDirection),
                 _camara.topDirection,
                 -_camara.gazeDirection)
