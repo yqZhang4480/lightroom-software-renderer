@@ -29,6 +29,11 @@ namespace lightroom
             return _ret;
         }
         using Vector<_N>::operator=;
+        Homogeneous<_N>& apply(const Matrix<_N>& _transformMatrix)
+        {
+            *this = _transformMatrix * (*this);
+            return *this;
+        }
 
     private:
         template <size_t _SRC_SIZE, size_t _DST_SIZE>

@@ -96,11 +96,11 @@ namespace lightroom
             std::fill(begin(), end(), nullptr);
         }
     };
-    class OverwriteMask : public std::vector<bool>
+    class OverwriteMask : public std::vector<int>
     {
     public:
         template <typename... _Args>
-        OverwriteMask(_Args&&... _args) : std::vector<bool>(_args...) {}
+        OverwriteMask(_Args&&... _args) : std::vector<int>(_args...) {}
         void clear()
         {
             std::fill(begin(), end(), false);
@@ -260,46 +260,63 @@ namespace lightroom
         }
     };*/
 
-    class Vertex3D
+    enum class GraphObjType : uint8_t
+    {
+        NONE, LINES, LINE_STRIP, LINE_LOOP, TRIANGLE_STRIP, TRIANGLE_FAN
+    };
+    class Vertex3DIn
     {
     public:
-        Vertex3D(
+        friend class PipelineManager;
+        Homogeneous<4> position;
+        Vertex3DIn(const Vector<3>& position) :
+            position(position), _graphObjType(GraphObjType::NONE) {}
+        GraphObjType _graphObjType;
+        Vertex3DIn(GraphObjType _graphObjType, const Homogeneous<4>& position) :
+            position(position), _graphObjType(_graphObjType) {}
+    };
+    class Vertex3DOut
+    {
+    public:
+        friend class PipelineManager;
+        Vertex3DOut(
             const Homogeneous<4>& position = Homogeneous<4>(Vector<3>{ 0, 0, 0 }),
-            const Homogeneous<4>& normal = Homogeneous<4>(Vector<3>{ 0, 0, 0 }),
+            const Vector<3>& normal = { 0, 0, 0 },
             const NormalizedColor& color = { 0, 0, 0, 1 }) :
-            position(position), color(color), normal(normal) {}
+            _graphObjType(GraphObjType::NONE), position(position), color(color), normal(normal) {}
 
-        Vertex3D& apply(const Matrix<4>& _transformMatrix)
+        Vertex3DOut& apply(const Matrix<4>& _transformMatrix)
         {
-            position = Vector<4>(_transformMatrix * position);
+            position.apply(_transformMatrix);
             return *this;
         }
         std::vector<Triangle3D const*> relatedTriangles;
-
         Homogeneous<4> position;
-        Homogeneous<4> normal;
+        Vector<3> normal;
         NormalizedColor color;
+        Vertex3DOut(GraphObjType _graphObjType,
+                    const Homogeneous<4>& position = Homogeneous<4>(Vector<3>{ 0, 0, 0 }),
+                    const Vector<3>& normal = { 0, 0, 0 },
+                    const NormalizedColor& color = { 0, 0, 0, 1 }) :
+            _graphObjType(_graphObjType), position(position), color(color), normal(normal) {}
+        GraphObjType _graphObjType;
     };
 
-    enum class GraphObjType
-    {
-        LINE, TRIANGLE
-    };
+    
     class GraphObj3D
     {
     public:
         virtual void draw(NormalizedColorMap&,
                           OverwriteMask&,
-                          std::unordered_map<const Vertex3D*, Vertex3D>&,
                           DepthBuffer&,
                           ReferenceBuffer&) const = 0;
         virtual ~GraphObj3D() {}
     };
     class Line3D : public GraphObj3D
     {
-        std::array<Vertex3D*, 2> _vertexs;
+        std::array<Vertex3DOut*, 2> _vertexs;
     public:
-        Line3D(const std::array<Vertex3D*, 2>& _v) : _vertexs(_v)
+        Line3D(const std::array<Vertex3DOut*, 2>& _v) : _vertexs(_v)
         {}
         virtual ~Line3D() {}
         inline bool isVaild() const
@@ -310,20 +327,19 @@ namespace lightroom
         virtual void draw(
             NormalizedColorMap& _ncm,
             OverwriteMask& _mask,
-            std::unordered_map<const Vertex3D*, Vertex3D>& _vertexsOut,
             DepthBuffer& _depthBuffer,
             ReferenceBuffer& _refBuffer) const override
         {
-            auto& _v0 = _vertexsOut[_vertexs[0]];
-            auto& _v1 = _vertexsOut[_vertexs[1]];
-            if (_v0.position[0] > _v1.position[0])
+            auto _v0 = _vertexs[0];
+            auto _v1 = _vertexs[1];
+            if (_v0->position[0] > _v1->position[0])
             {
                 std::swap(_v0, _v1);
             }
-            int _x0 = _v0.position[0],
-                _y0 = _v0.position[1],
-                _x1 = _v1.position[0],
-                _y1 = _v1.position[1];
+            int _x0 = _v0->position[0],
+                _y0 = _v0->position[1],
+                _x1 = _v1->position[0],
+                _y1 = _v1->position[1];
             int _y1_y0 = _y1 - _y0,
                 _x1_x0 = _x1 - _x0;
             int _xMin = max(0, min(_x0, _x1)),
@@ -334,15 +350,15 @@ namespace lightroom
                 _y = _y0;
             Float k = Float(_y1_y0) / _x1_x0;
 
-            Float _depth = _v0.position[2];
-            auto _color = _v0.color;
+            Float _depth = _v0->position[2];
+            auto _color = _v0->color;
             if (k <= -1)
             {
-                Float _d = _lineFunction(_x + 0.5, _y - 1, _vertexsOut);
+                Float _d = _lineFunction(_x + 0.5, _y - 1);
 
                 Float _dt = sqrt((Float(1) / (k * k) + 1) / (_x1_x0 * _x1_x0 + _y1_y0 * _y1_y0));
-                Float _ddepth = _dt * (_v1.position[2] - _v0.position[2]);
-                auto _dcolor = _dt * (_v1.color + -1 * _v0.color);
+                Float _ddepth = _dt * (_v1->position[2] - _v0->position[2]);
+                auto _dcolor = _dt * (_v1->color + -1 * _v0->color);
 
                 for (; _y >= _yMin; _y--)
                 {
@@ -363,11 +379,11 @@ namespace lightroom
             }
             else if (k <= 0)
             {
-                Float _d = _lineFunction(_x + 1, _y - 0.5, _vertexsOut);
+                Float _d = _lineFunction(_x + 1, _y - 0.5);
 
                 Float _dt = sqrt((k * k + 1) / (_x1_x0 * _x1_x0 + _y1_y0 * _y1_y0));
-                Float _ddepth = _dt * (_v1.position[2] - _v0.position[2]);
-                auto _dcolor = _dt * (_v1.color + -1 * _v0.color);
+                Float _ddepth = _dt * (_v1->position[2] - _v0->position[2]);
+                auto _dcolor = _dt * (_v1->color + -1 * _v0->color);
                 for (; _x <= _xMax; _x++)
                 {
                     _putPixel(_x, _y, _depth, _color, _ncm, _mask, _depthBuffer, _refBuffer);
@@ -387,11 +403,11 @@ namespace lightroom
             }
             else if (k <= 1)
             {
-                Float _d = _lineFunction(_x + 1, _y + 0.5, _vertexsOut);
+                Float _d = _lineFunction(_x + 1, _y + 0.5);
 
                 Float _dt = sqrt((k * k + 1) / (_x1_x0 * _x1_x0 + _y1_y0 * _y1_y0));
-                Float _ddepth = _dt * (_v1.position[2] - _v0.position[2]);
-                auto _dcolor = _dt * (_v1.color + -1 * _v0.color);
+                Float _ddepth = _dt * (_v1->position[2] - _v0->position[2]);
+                auto _dcolor = _dt * (_v1->color + -1 * _v0->color);
                 for (; _x <= _xMax; _x++)
                 {
                     _putPixel(_x, _y, _depth, _color, _ncm, _mask, _depthBuffer, _refBuffer);
@@ -411,11 +427,11 @@ namespace lightroom
             }
             else if (k > 1)
             {
-                Float _d = _lineFunction(_x + 0.5, _y + 1, _vertexsOut);
+                Float _d = _lineFunction(_x + 0.5, _y + 1);
 
                 Float _dt = sqrt((Float(1) / (k * k) + 1) / (_x1_x0 * _x1_x0 + _y1_y0 * _y1_y0));
-                Float _ddepth = _dt * (_v1.position[2] - _v0.position[2]);
-                auto _dcolor = _dt * (_v1.color + -1 * _v0.color);
+                Float _ddepth = _dt * (_v1->position[2] - _v0->position[2]);
+                auto _dcolor = _dt * (_v1->color + -1 * _v0->color);
                 for (; _y <= _yMax; _y++)
                 {
                     _putPixel(_x, _y, _depth, _color, _ncm, _mask, _depthBuffer, _refBuffer);
@@ -458,12 +474,10 @@ namespace lightroom
             _ncm[_index] = _color;
         }
 
-        inline Float _lineFunction(
-            Float _x, Float _y,
-            std::unordered_map<const Vertex3D*, Vertex3D>& _vertexsOut) const
+        inline Float _lineFunction(Float _x, Float _y) const
         {
-            auto& _p0 = _vertexsOut[_vertexs[0]].position;
-            auto& _p1 = _vertexsOut[_vertexs[1]].position;
+            auto& _p0 = _vertexs[0]->position;
+            auto& _p1 = _vertexs[1]->position;
             int _x0 = _p0[0],
                 _y0 = _p0[1],
                 _x1 = _p1[0],
@@ -474,18 +488,18 @@ namespace lightroom
     class Triangle3D : public GraphObj3D
     {
     protected:
-        std::array<Vertex3D*, 3> _vertexs;
+        std::array<Vertex3DOut*, 3> _vertexs;
         class Vertex3DPointerYComparer
         {
         public:
-            bool operator()(const Vertex3D* _left, const Vertex3D* _right)
+            bool operator()(const Vertex3DOut* _left, const Vertex3DOut* _right)
             {
                 return _left->position[1] < _right->position[1];
             }
         };
 
     public:
-        Triangle3D(const std::array<Vertex3D*, 3>& _v) : _vertexs(_v)
+        Triangle3D(const std::array<Vertex3DOut*, 3>& _v) : _vertexs(_v)
         {
             _v[0]->relatedTriangles.push_back(this);
             _v[1]->relatedTriangles.push_back(this);
@@ -497,11 +511,27 @@ namespace lightroom
             return (_vertexs[0] != nullptr) && (_vertexs[1] != nullptr) && (_vertexs[2] != nullptr);
         }
 
-        
+        Float evaluateAreaSquare() const
+        {
+            auto& _p0 = _vertexs[0]->position;
+            auto& _p1 = _vertexs[1]->position;
+            auto& _p2 = _vertexs[2]->position;
+            auto a = (_p2 - _p1).norm();
+            auto b = (_p2 - _p0).norm();
+            auto c = (_p1 - _p0).norm();
+            return (a + b + c) * (a + b - c) * (b + c - a) * (c + a - b) / 16;
+        }
+        Vector<3> evaluateNormal() const
+        {
+            auto _p0 = _vertexs[0]->position.toOrdinaryCoordinate();
+            auto&& _p1 = _vertexs[1]->position.toOrdinaryCoordinate();
+            auto&& _p2 = _vertexs[2]->position.toOrdinaryCoordinate();
+            return ((_p1 - _p0).cross(_p2 - _p0)).normalized();
+        }
+
         virtual void draw(
             NormalizedColorMap& _ncm,
             OverwriteMask& _mask,
-            std::unordered_map<const Vertex3D*, Vertex3D>& _vertexsOut,
             DepthBuffer& _depthBuffer,
             ReferenceBuffer& _refBuffer) const override
         {
@@ -510,9 +540,9 @@ namespace lightroom
                 return;
             }
 
-            auto& _p0 = _vertexsOut[_vertexs[0]].position;
-            auto& _p1 = _vertexsOut[_vertexs[1]].position;
-            auto& _p2 = _vertexsOut[_vertexs[2]].position;
+            auto& _p0 = _vertexs[0]->position;
+            auto& _p1 = _vertexs[1]->position;
+            auto& _p2 = _vertexs[2]->position;
 
             int _x0 = _p0[0],
                 _x1 = _p1[0],
@@ -542,13 +572,13 @@ namespace lightroom
             Float _gamma = (_a * _f - _c * _e) / _M;
             Float _alpha = 1 - _beta - _gamma;
 
-            Float _depth = _vertexsOut[_vertexs[0]].position[2] * _alpha +
-                _vertexsOut[_vertexs[1]].position[2] * _beta +
-                _vertexsOut[_vertexs[2]].position[2] * _gamma;
+            Float _depth = _vertexs[0]->position[2] * _alpha +
+                _vertexs[1]->position[2] * _beta +
+                _vertexs[2]->position[2] * _gamma;
             auto _color = NormalizedColor{
-                _vertexsOut[_vertexs[0]].color * _alpha +
-                _vertexsOut[_vertexs[1]].color * _beta +
-                _vertexsOut[_vertexs[2]].color * _gamma };
+                _vertexs[0]->color * _alpha +
+                _vertexs[1]->color * _beta +
+                _vertexs[2]->color * _gamma };
 
             Float _dbetax = _d / _M;
             Float _dbetay = -_b / _M;
@@ -556,17 +586,17 @@ namespace lightroom
             Float _dgammay = _a / _M;
 
             Float _ddepthx =
-                _dbetax * (_vertexsOut[_vertexs[1]].position[2] - _vertexsOut[_vertexs[0]].position[2]) +
-                _dgammax * (_vertexsOut[_vertexs[2]].position[2] - _vertexsOut[_vertexs[0]].position[2]);
-            Float _ddepthy = 
-                _dbetay * (_vertexsOut[_vertexs[1]].position[2] - _vertexsOut[_vertexs[0]].position[2]) +
-                _dgammay * (_vertexsOut[_vertexs[2]].position[2] - _vertexsOut[_vertexs[0]].position[2]);
+                _dbetax * (_vertexs[1]->position[2] - _vertexs[0]->position[2]) +
+                _dgammax * (_vertexs[2]->position[2] - _vertexs[0]->position[2]);
+            Float _ddepthy =
+                _dbetay * (_vertexs[1]->position[2] - _vertexs[0]->position[2]) +
+                _dgammay * (_vertexs[2]->position[2] - _vertexs[0]->position[2]);
             auto _dcolorx =
-                _dbetax * (_vertexsOut[_vertexs[1]].color + -1 * _vertexsOut[_vertexs[0]].color) +
-                _dgammax * (_vertexsOut[_vertexs[2]].color + -1 * _vertexsOut[_vertexs[0]].color);
+                _dbetax * (_vertexs[1]->color + -1 * _vertexs[0]->color) +
+                _dgammax * (_vertexs[2]->color + -1 * _vertexs[0]->color);
             auto _dcolory =
-                _dbetay * (_vertexsOut[_vertexs[1]].color + -1 *  _vertexsOut[_vertexs[0]].color) +
-                _dgammay * (_vertexsOut[_vertexs[2]].color + -1 * _vertexsOut[_vertexs[0]].color);
+                _dbetay * (_vertexs[1]->color + -1 * _vertexs[0]->color) +
+                _dgammay * (_vertexs[2]->color + -1 * _vertexs[0]->color);
 
             for (int _x = _xMin; _x <= _xMax; _x++)
             {
@@ -612,7 +642,7 @@ namespace lightroom
 
             if (__depth <= _depthBuffer[_index])
             {
-                //return;
+                return;
             }
             _depthBuffer[_index] = __depth;
             _refBuffer[_index] = this;

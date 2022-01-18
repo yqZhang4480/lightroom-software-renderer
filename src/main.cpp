@@ -28,14 +28,12 @@ double lockFps(LockArgs& LockArgs)
 int main(int argc, char* argv[])
 {
     PipelineManager pm;
-    auto cp = new Vertex3D(Vector<3>{ 100, 0, 0 });
-    pm.useCamara(pm.addCamara(cp, Vector<3>{ -100, 0, 0 }, Vector<3>{ 0, 0, 1 }, AngleOfDegrees[78]));
-    pm.addGraphObject<GraphObjType::TRIANGLE>(std::array<Vertex3D*, 3>{
-            pm.addVertex(Vector<3>(0, -10, 0), Vector<3>(-1, 0, 0), NormalizedColor(0, 1, 1)),
-        pm.addVertex(Vector<3>(0, 0, 50), Vector<3>(-1, 0, 0), NormalizedColor(1, 0, 1)),
-            pm.addVertex(Vector<3>(0, 10, -20), Vector<3>(-1, 0, 0), NormalizedColor(1, 1, 0))
+    auto tp = Vertex3DIn(Vector<3>(0, 0, 20));
+    pm.useCamara(pm.addCamara(Vector<3>{ 100, 0, 0 }, Vector<3>{ -100, 0, 0 }, Vector<3>{ 0, 0, 1 }, AngleOfDegrees[78]));
+    pm.addGraphObject(GraphObjType::TRIANGLE_FAN, {
+            Vector<3>(0, -10, -10), Vector<3>(0, 0, 20), Vector<3>(0, 10, -10)
     });
-    pm.addPointLight(pm.addVertex(Vector<3>(100, 0, 0), Vector<3>(0, 0, 0), NormalizedColor(1, 1, 0.5)));
+    pm.addPointLight(Vector<3>(100, 0, 0), NormalizedColor(1, 1, 0.5));
 
     LARGE_INTEGER timers[2]{}, perfFreq{ 0 };
     QueryPerformanceFrequency(&perfFreq);
@@ -53,9 +51,9 @@ int main(int argc, char* argv[])
         cout << "FPS: " << (int)(1000 * perfFreq.QuadPart / deltapc) << " (lock: " << lockFPS << ")" << endl;
 
         TransformMixer3D tm;
-        tm.rotate(0, 0, 64);
+        //tm.translate(0.5, 0, 0);
         pm.render();
-        cp->apply(tm.getTransformMatrix());
+        //tp->apply(tm.getTransformMatrix());
 
     }
 }

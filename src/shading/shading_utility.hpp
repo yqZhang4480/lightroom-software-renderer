@@ -10,38 +10,35 @@ namespace lightroom
     class PointLight
     {
     public:
-        PointLight(Vertex3D* _vertex) : vertex(_vertex) {}
+        PointLight(const Vector<3>& position, const NormalizedColor& color) :
+            position(position), color(color) {}
 
-        Vertex3D* vertex;
+        Homogeneous<4> position;
+        NormalizedColor color;
     };
 
     struct Camara
     {
-        Vertex3D* position;
+        Homogeneous<4> position;
         Vector<3> gazeDirection;
         Vector<3> topDirection;
         Angle fov;
 
-        Camara(Vertex3D* _position, const Vector<3>& _gazeDirection, const Vector<3>& _topDirection, Angle _fov) :
+        Camara(const Vector<3>& _position, const Vector<3>& _gazeDirection,
+               const Vector<3>& _topDirection, Angle _fov) :
             position(_position), gazeDirection(_gazeDirection), topDirection(_topDirection), fov(_fov) {}
     };
 
     class PipelineManager
     {
+        using Vertex3DInContainer = std::list<Vertex3DIn>;
+        using Vertex3DOutContainer = std::vector<Vertex3DOut>;
     public:
         PipelineManager() :
             _ncm({ _viewport.getWidth(), _viewport.getHeight() }),
             _mask(_viewport.getWidth()* _viewport.getHeight(), false),
             _refBuffer(_viewport.getWidth() * _viewport.getHeight(), nullptr),
-            _depthBuffer(_viewport.getWidth() * _viewport.getHeight(), -1)
-        {}
-        ~PipelineManager()
-        {
-            for (auto& _go : _graphObjects)
-            {
-                delete _go;
-            }
-        }
+            _depthBuffer(_viewport.getWidth() * _viewport.getHeight(), -1) {}
 
         void useCamara(size_t _camaraIndex)
         {
@@ -51,39 +48,32 @@ namespace lightroom
         void render()
         {
             _prepare();
+            _assemble();
+            _evaluateVertexsNormal();
             _vertexsShade();
             _mvpTransform();
             _perspectiveDivision();
             _viewportTransform();
             for (auto _graphObj : _graphObjects)
             {
-                _graphObj->draw(_ncm, _mask, _vertexsOut, _depthBuffer, _refBuffer);
+                _graphObj->draw(_ncm, _mask, _depthBuffer, _refBuffer);
             }
             _viewport.print(_ncm, _mask);
         }
 
-        template <typename... _Args>
-        Vertex3D* addVertex(_Args&&... _args)
+        std::pair<Vertex3DInContainer::iterator, Vertex3DInContainer::iterator>
+            addGraphObject(GraphObjType _objType, const std::vector<Vector<3>>& _positions)
         {
-            _vertexsIn.emplace_front(_args...);
+            auto _begin = _vertexIns.end();
+            for (auto& _v : _positions)
+            {
+                _vertexIns.emplace_back(_objType, _v);
+            }
+            auto _end = _vertexIns.end();
+            _vertexIns.emplace_back(GraphObjType::NONE, Homogeneous<4>(Vector<3>{ 0,0,0 }));
+            return { _begin, _end };
+        }
 
-            auto _ret = &_vertexsIn.front();
-            _vertexsOut.insert({ _ret, *_ret });
-            return _ret;
-        }
-        template <GraphObjType _GRAPH_OBJ_TYPE, typename... _Args>
-        GraphObj3D* addGraphObject(_Args&&... _args)
-        {
-            if constexpr (_GRAPH_OBJ_TYPE == lightroom::GraphObjType::LINE)
-            {
-                _graphObjects.push_back(new Line3D(_args...));
-            }
-            else if (_GRAPH_OBJ_TYPE == lightroom::GraphObjType::TRIANGLE)
-            {
-                _graphObjects.push_back(new Triangle3D(_args...));
-            }
-            return _graphObjects.back();
-        }
         template <typename... _Args>
         void addPointLight(_Args&&... _args)
         {
@@ -97,9 +87,9 @@ namespace lightroom
         }
 
     public:
-        std::list<Vertex3D> _vertexsIn;
-        std::unordered_map<const Vertex3D*, Vertex3D> _vertexsOut;
-        std::list<GraphObj3D*> _graphObjects;
+        Vertex3DInContainer _vertexIns;
+        Vertex3DOutContainer _vertexOuts;
+        std::vector<GraphObj3D*> _graphObjects;
         std::vector<PointLight> _pointLights;
 
         Viewport _viewport;
@@ -113,49 +103,180 @@ namespace lightroom
 
         size_t _camaraIndex;
 
-        inline void _vertexsShade()
+        inline void _prepare()
+        {
+            _mask        .clear();
+            _refBuffer   .clear();
+            _depthBuffer .clear();
+            _vertexOuts  .clear();
+            for (auto _go : _graphObjects)
+            {
+                delete _go;
+            }
+            _graphObjects.clear();
+
+            for (const auto& _v : _vertexIns)
+            {
+                _vertexOuts.emplace_back(_v._graphObjType, _v.position);
+            }
+        }
+
+        void _assemble()
+        {
+            auto _end = _vertexOuts.end();
+            auto _first = _vertexOuts.begin();
+            for (auto _last = _vertexOuts.begin(); ++_last != _end;)
+            {
+                if (_last->_graphObjType != _first->_graphObjType)
+                {
+                    _assembleDeliver(_first, _last);
+                    _first = ++_last;
+                    if (_first == _end)
+                    {
+                        break;
+                    }
+                }
+            }
+        }
+        void _assembleDeliver(
+            Vertex3DOutContainer::iterator _begin, Vertex3DOutContainer::iterator _end)
+        {
+            switch (_begin->_graphObjType)
+            {
+                case lightroom::GraphObjType::LINES:
+                    _assembleLines(_begin, _end);
+                    break;
+                case lightroom::GraphObjType::LINE_STRIP:
+                    _assembleLineStrip(_begin, _end);
+                    break;
+                case lightroom::GraphObjType::LINE_LOOP:
+                    _assembleLineLoop(_begin, _end);
+                    break;
+                case lightroom::GraphObjType::TRIANGLE_STRIP:
+                    _assembleTriangleStrip(_begin, _end);
+                    break;
+                case lightroom::GraphObjType::TRIANGLE_FAN:
+                    _assembleTriangleFan(_begin, _end);
+                    break;
+                default:
+                    break;
+            }
+        }
+        inline void _assembleLines(
+            Vertex3DOutContainer::iterator _begin, Vertex3DOutContainer::iterator _end)
+        {
+            for (auto _i = _begin, _j = ++_begin; _i != _end && _j != _end; ++++_i, ++++_j)
+            {
+                _graphObjects.push_back(new Line3D({ &*_i, &*_j }));
+            }
+        }
+        inline void _assembleLineStrip(
+            Vertex3DOutContainer::iterator _begin, Vertex3DOutContainer::iterator _end)
+        {
+            auto _i = _begin;
+            auto _j = ++_begin;
+            if (_i == _end || _j == _end)
+            {
+                return;
+            }
+            for (_i, _j; _j != _end; ++_i, ++_j)
+            {
+                _graphObjects.push_back(new Line3D({ &*_i, &*_j }));
+            }
+        }
+        inline void _assembleLineLoop(
+            Vertex3DOutContainer::iterator _begin, Vertex3DOutContainer::iterator _end)
+        {
+            auto _i = _begin;
+            auto _j = ++_begin;
+            if (_i == _end || _j == _end)
+            {
+                return;
+            }
+            for (_i, _j; _j != _end; ++_i, ++_j)
+            {
+                _graphObjects.push_back(new Line3D({ &*_i, &*_j }));
+            }
+            _graphObjects.push_back(new Line3D({ &*_i, &*_begin }));
+        }
+        inline void _assembleTriangleStrip(
+            Vertex3DOutContainer::iterator _begin, Vertex3DOutContainer::iterator _end)
+        {
+            auto _i = _begin;
+            auto _j = ++_begin;
+            auto _k = ++_begin;
+            if (_i == _end || _j == _end || _k == _end)
+            {
+                return;
+            }
+            
+            for (_i, _j, _k; _k != _end; ++_i, ++_j, ++_k)
+            {
+                _graphObjects.push_back(new Triangle3D({ &*_i, &*_j, &*_k }));
+            }
+        }
+        inline void _assembleTriangleFan(
+            Vertex3DOutContainer::iterator _begin, Vertex3DOutContainer::iterator _end)
+        {
+            auto _i = _begin;
+            auto _j = ++_begin;
+            auto _k = ++_begin;
+            if (_i == _end || _j == _end || _k == _end)
+            {
+                return;
+            }
+            for (_j, _k; _k != _end; ++_j, ++_k)
+            {
+                _graphObjects.push_back(new Triangle3D({ &*_i, &*_j, &*_k }));
+            }
+        }
+
+        void _evaluateVertexsNormal()
+        {
+            for (auto& _v : _vertexOuts)
+            {
+                Float _sumArea = 0;
+                Vector<3> _normal{ 0,0,0 };
+                for (const auto _t : _v.relatedTriangles)
+                {
+                    auto _area = _t->evaluateAreaSquare();
+                    _sumArea += _area;
+                    _normal += _area * _t->evaluateNormal();
+                }
+                _v.normal = _normal.normalized();
+            }
+        }
+
+        void _vertexsShade()
         {
             _vertexAmbientShade();
             _vertexDiffuseShade();
         }
-        inline void _prepare()
+        void _vertexAmbientShade()
         {
-            _mask       .clear();
-            _refBuffer  .clear();
-            _depthBuffer.clear();
-            _vertexsOut .clear();
-
-            const auto _end = _vertexsIn.cend();
-            for (auto _i = _vertexsIn.cbegin(); _i != _end; _i++)
+            for (auto& _p : _vertexOuts)
             {
-                _vertexsOut[&*_i] = *_i;
+                _p.color = _ambient;
             }
         }
-        inline void _vertexAmbientShade()
+        void _vertexDiffuseShade()
         {
-            for (auto& _p : _vertexsOut)
+            for (auto& _pl : _pointLights)
             {
-                //_p.second.color = _ambient;
-            }
-        }
-        inline void _vertexDiffuseShade()
-        {
-            for (const auto& _pl : _pointLights)
-            {
-                for (auto& _p : _vertexsOut)
+                for (auto& _v : _vertexOuts)
                 {
-                    auto& _v = _p.second;
-                    Vector<3> _l = _pl.vertex->position.toOrdinaryCoordinate() - _v.position.toOrdinaryCoordinate();
-                    Float _diffuse = std::max<Float>(Float(0), -_v.normal.toOrdinaryCoordinate().dot(_l.normalized()));
-                    //_v.color += _pl.vertex->color * _diffuse;
+                    Vector<3> _l =
+                        _pl.position.toOrdinaryCoordinate() - _v.position.toOrdinaryCoordinate();
+                    Float _diffuse = abs(_v.normal.dot(_l.normalized()));
+                    _v.color += _pl.color * _diffuse;
                 }
             }
         }
 
-        inline void _mvpTransform()
+        void _mvpTransform()
         {
             TransformMixer3D _tm;
-            const auto& _camara = _camaras[_camaraIndex];
+            auto& _camara = _camaras[_camaraIndex];
 
             constexpr const Float _r = 1;
             constexpr const Float _t = 1;
@@ -174,34 +295,34 @@ namespace lightroom
                 0, 0, 0, Float(1);
 
             _tm.changeBase(
-                _camara.position->position.toOrdinaryCoordinate(),
+                _camara.position.toOrdinaryCoordinate(),
                 _camara.topDirection.cross(-_camara.gazeDirection),
                 _camara.topDirection,
                 -_camara.gazeDirection)
                 .apply(_perspective)
                 .apply(_ortho);
 
-            for (auto& _p : _vertexsOut)
+            for (auto& _v : _vertexOuts)
             {
-                _p.second.apply(_tm.getTransformMatrix());
+                _v.apply(_tm.getTransformMatrix());
             }
         }
-        inline void _perspectiveDivision()
+        void _perspectiveDivision()
         {
-            for (auto& _p : _vertexsOut)
+            for (auto& _v : _vertexOuts)
             {
-                _p.second.position.divide();
+                _v.position.divide();
             }
         }
-        inline void _viewportTransform()
+        void _viewportTransform()
         {
             TransformMixer3D _tm;
             _tm.scale(_viewport.getWidth() / 2.0, -_viewport.getHeight() / 2.0, 1)
                 .translate((_viewport.getWidth() - 1.0) / 2, (_viewport.getHeight() - 1.0) / 2, 0);
 
-            for (auto& _p : _vertexsOut)
+            for (auto& _v : _vertexOuts)
             {
-                _p.second.apply(_tm.getTransformMatrix());
+                _v.apply(_tm.getTransformMatrix());
             }
         }
     };
