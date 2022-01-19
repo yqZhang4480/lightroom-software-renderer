@@ -61,9 +61,19 @@ namespace lightroom
             _mvpTransform();
             _perspectiveDivision();
             _viewportTransform();
+
+
+            // TODO
+            auto& _camara = _camaras[_camaraIndex];
+
+            constexpr const Float _r = 1;
+            constexpr const Float _t = 1;
+            constexpr const Float _f = -10000;
+            Float _n = -_r * cos(_camara.fov / 2) / sin(_camara.fov / 2);
             for (auto _graphObj : _graphObjects)
             {
-                _graphObj->draw(_colorMap, _mask, _depthBuffer, _refBuffer);
+
+                _graphObj->draw(_colorMap, _mask, _depthBuffer, _refBuffer, _n, _f);
             }
             _viewport.print(_colorMap, _mask);
         }

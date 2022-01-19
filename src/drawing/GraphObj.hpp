@@ -9,7 +9,8 @@ namespace lightroom
         virtual void draw(WritableColorMap* _out,
                           OverwriteMask& _mask,
                           DepthBuffer& _depthBuffer,
-                          ReferenceBuffer& _refBuffer) const = 0;
+                          ReferenceBuffer& _refBuffer,
+                          Float _nplain, Float _fplain) const = 0;
         virtual ~GraphObj3D() {}
     };
 
@@ -29,7 +30,8 @@ namespace lightroom
             WritableColorMap* _outColorMap,
             OverwriteMask& _mask,
             DepthBuffer& _depthBuffer,
-            ReferenceBuffer& _refBuffer) const override
+            ReferenceBuffer& _refBuffer,
+            Float _nplain, Float _fplain) const override
         {
             auto _v0 = _vertexs[0];
             auto _v1 = _vertexs[1];
@@ -230,12 +232,12 @@ namespace lightroom
             return ((_p1 - _p0).cross(_p2 - _p0)).normalized();
         }
 
-        // TODO: 透视校正插值
         virtual void draw(
             WritableColorMap* _outColorMap,
             OverwriteMask& _mask,
             DepthBuffer& _depthBuffer,
-            ReferenceBuffer& _refBuffer) const override
+            ReferenceBuffer& _refBuffer,
+            Float _nplain, Float _fplain) const override
         {
             if (!isVaild())
             {
@@ -274,73 +276,38 @@ namespace lightroom
             Float _gamma = (_a * _f - _c * _e) / _M;
             Float _alpha = 1 - _beta - _gamma;
 
-            Float _depth = _vertexs[0]->position[2] * _alpha +
-                _vertexs[1]->position[2] * _beta +
-                _vertexs[2]->position[2] * _gamma;
+            Float _z0 = _vertexs[0]->position[2];
+            Float _z1 = _vertexs[1]->position[2];
+            Float _z2 = _vertexs[2]->position[2];
+            Float _1_Z0 = _nplain + _fplain - _z0 * (_nplain - _fplain);
+            Float _1_Z1 = _nplain + _fplain - _z1 * (_nplain - _fplain);
+            Float _1_Z2 = _nplain + _fplain - _z2 * (_nplain - _fplain);
 
-            Float _texturePositionX =
-                _vertexs[0]->texturePosition[0] * _alpha +
-                _vertexs[1]->texturePosition[0] * _beta +
-                _vertexs[2]->texturePosition[0] * _gamma;
-            Float _texturePositionY =
-                _vertexs[0]->texturePosition[1] * _alpha +
-                _vertexs[1]->texturePosition[1] * _beta +
-                _vertexs[2]->texturePosition[1] * _gamma;
-            ///auto _color = Color{
-            ///    _vertexs[0]->color * _alpha +
-            ///    _vertexs[1]->color * _beta +
-            ///    _vertexs[2]->color * _gamma };
+            Float _zp = _z0 * _alpha + _z1 * _beta + _z2 * _gamma;
 
             Float _dbetax = _d / _M;
             Float _dbetay = -_b / _M;
             Float _dgammax = -_c / _M;
             Float _dgammay = _a / _M;
 
-            Float _ddepthx =
-                _dbetax * (_vertexs[1]->position[2] - _vertexs[0]->position[2]) +
-                _dgammax * (_vertexs[2]->position[2] - _vertexs[0]->position[2]);
-            Float _ddepthy =
-                _dbetay * (_vertexs[1]->position[2] - _vertexs[0]->position[2]) +
-                _dgammay * (_vertexs[2]->position[2] - _vertexs[0]->position[2]);
-            Float _dtpxx =
-                _dbetax * (_vertexs[1]->texturePosition[0] - _vertexs[0]->texturePosition[0]) +
-                _dgammax * (_vertexs[2]->texturePosition[0] - _vertexs[0]->texturePosition[0]);
-            Float _dtpxy =
-                _dbetay * (_vertexs[1]->texturePosition[0] - _vertexs[0]->texturePosition[0]) +
-                _dgammay * (_vertexs[2]->texturePosition[0] - _vertexs[0]->texturePosition[0]);
-            Float _dtpyx =
-                _dbetax * (_vertexs[1]->texturePosition[1] - _vertexs[0]->texturePosition[1]) +
-                _dgammax * (_vertexs[2]->texturePosition[1] - _vertexs[0]->texturePosition[1]);
-            Float _dtpyy =
-                _dbetay * (_vertexs[1]->texturePosition[1] - _vertexs[0]->texturePosition[1]) +
-                _dgammay * (_vertexs[2]->texturePosition[1] - _vertexs[0]->texturePosition[1]);
-            ///auto _dcolorx =
-            ///    _dbetax * (_vertexs[1]->color + -1 * _vertexs[0]->color) +
-            ///    _dgammax * (_vertexs[2]->color + -1 * _vertexs[0]->color);
-            ///auto _dcolory =
-            ///    _dbetay * (_vertexs[1]->color + -1 * _vertexs[0]->color) +
-            ///    _dgammay * (_vertexs[2]->color + -1 * _vertexs[0]->color);
+            Float _dzx = _dbetax * (_z1 - _z0) + _dgammax * (_z2 - _z0);
+            Float _dzy = _dbetay * (_z1 - _z0) + _dgammay * (_z2 - _z0);
 
             for (int _x = _xMin; _x <= _xMax; _x++)
             {
                 Float __beta = _beta;
                 Float __gamma = _gamma;
-                Float __depth = _depth;
-                Float __texturePositionX = _texturePositionX;
-                Float __texturePositionY = _texturePositionY;
-                ///auto __color = _color;
+                Float __zp = _zp;
                 for (int _y = _yMin; _y <= _yMax; _y++)
                 {
-                    if ((unsigned)_y >= _outColorMap->getHeight() || (unsigned)_x >= _outColorMap->getWidth())
+                    if ((unsigned)_y >= _outColorMap->getHeight() ||
+                        (unsigned)_x >= _outColorMap->getWidth())
                     {
                         continue;
                     }
                     __beta += _dbetay;
                     __gamma += _dgammay;
-                    __depth += _ddepthy;
-                    __texturePositionX += _dtpxy;
-                    __texturePositionY += _dtpyy;
-                    ///__color += _dcolory;
+                    __zp += _dzy;
 
                     if (__beta < 0 || __beta > 1)
                     {
@@ -350,23 +317,30 @@ namespace lightroom
                     {
                         continue;
                     }
-                    if (__texturePositionX < 0 ||
-                        __texturePositionY < 0 ||
-                        __texturePositionX > _vertexs[0]->texture->getWidth() ||
-                        __texturePositionY >= _vertexs[0]->texture->getHeight())
+
+                    Float __alpha = 1 - __beta - __gamma;
+                    Float _1_Zp = (_nplain + _fplain - __zp * (_nplain - _fplain));
+                    Float __u =
+                        _vertexs[0]->texturePosition[0] * __alpha / (_1_Zp / _1_Z0) +
+                        _vertexs[1]->texturePosition[0] * __beta  / (_1_Zp / _1_Z1) +
+                        _vertexs[2]->texturePosition[0] * __gamma / (_1_Zp / _1_Z2);
+                    Float __v =
+                        _vertexs[0]->texturePosition[1] * __alpha / (_1_Zp / _1_Z0) +
+                        _vertexs[1]->texturePosition[1] * __beta  / (_1_Zp / _1_Z1) +
+                        _vertexs[2]->texturePosition[1] * __gamma / (_1_Zp / _1_Z2);
+
+                    if (__u < 0 || __v < 0 ||
+                        __u > _vertexs[0]->texture->getWidth() ||
+                        __v >= _vertexs[0]->texture->getHeight())
                     {
                         continue;
                     }
-                    auto __color = _vertexs[0]->texture->get(
-                        PxCoordinate{ __texturePositionX, __texturePositionY });
-                    _putPixel(_x, _y, __depth, __color, _outColorMap, _mask, _depthBuffer, _refBuffer);
+                    auto __color = _vertexs[0]->texture->get(PxCoordinate{ __u, __v });
+                    _putPixel(_x, _y, __zp, __color, _outColorMap, _mask, _depthBuffer, _refBuffer);
                 }
                 _beta += _dbetax;
                 _gamma += _dgammax;
-                _depth += _ddepthx;
-                _texturePositionX += _dtpxx;
-                _texturePositionY += _dtpyx;
-                ///_color += _dcolorx;
+                _zp += _dzx;
             }
         }
     protected:
