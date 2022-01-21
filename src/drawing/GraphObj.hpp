@@ -182,7 +182,7 @@ namespace lightroom
                 return;
             }
             _depthBuffer[_index] = _depth;
-            _colorMap->set(_index, Color(1,1,1,1));
+            _colorMap->set(_index, Color(1, 1, 1, 1));
         }
 
     protected:
@@ -210,6 +210,9 @@ namespace lightroom
     {
     protected:
         std::array<Vertex3DOut*, 3> _vertices;
+    private:
+        mutable Float _nplain;
+        mutable Float _fplain;
 
     public:
         Triangle3D(const std::array<Vertex3DOut*, 3>& _vs) : _vertices(_vs)
@@ -252,6 +255,8 @@ namespace lightroom
             {
                 return;
             }
+            this->_nplain = _nplain;
+            this->_fplain = _fplain;
 
             auto& _p0 = _vertices[0]->position;
             auto& _p1 = _vertices[1]->position;
@@ -285,28 +290,15 @@ namespace lightroom
             Float _gamma = (_a * _f - _c * _e) / _M;
             Float _alpha = 1 - _beta - _gamma;
 
-            Float _z0 = _vertices[0]->position[2];
-            Float _z1 = _vertices[1]->position[2];
-            Float _z2 = _vertices[2]->position[2];
-            Float _1_Z0 = _nplain + _fplain - _z0 * (_nplain - _fplain);
-            Float _1_Z1 = _nplain + _fplain - _z1 * (_nplain - _fplain);
-            Float _1_Z2 = _nplain + _fplain - _z2 * (_nplain - _fplain);
-
-            Float _zp = _z0 * _alpha + _z1 * _beta + _z2 * _gamma;
-
             Float _dbetax = _d / _M;
             Float _dbetay = -_b / _M;
             Float _dgammax = -_c / _M;
             Float _dgammay = _a / _M;
 
-            Float _dzx = _dbetax * (_z1 - _z0) + _dgammax * (_z2 - _z0);
-            Float _dzy = _dbetay * (_z1 - _z0) + _dgammay * (_z2 - _z0);
-
             for (int _x = _xMin; _x <= _xMax; _x++)
             {
                 Float __beta = _beta;
                 Float __gamma = _gamma;
-                Float __zp = _zp;
                 for (int _y = _yMin; _y <= _yMax; _y++)
                 {
                     if ((unsigned)_y >= _outColorMap->getHeight() ||
@@ -316,7 +308,6 @@ namespace lightroom
                     }
                     __beta += _dbetay;
                     __gamma += _dgammay;
-                    __zp += _dzy;
 
                     if (__beta < 0 || __beta > 1)
                     {
@@ -328,48 +319,103 @@ namespace lightroom
                     }
                     Float __alpha = 1 - __beta - __gamma;
 
-                    /*Float _1_Zp = (_nplain + _fplain - __zp * (_nplain - _fplain));
-                    Float __u =
-                        _vertices[0]->texturePosition[0] * __alpha / (_1_Zp / _1_Z0) +
-                        _vertices[1]->texturePosition[0] * __beta  / (_1_Zp / _1_Z1) +
-                        _vertices[2]->texturePosition[0] * __gamma / (_1_Zp / _1_Z2);
-                    Float __v =
-                        _vertices[0]->texturePosition[1] * __alpha / (_1_Zp / _1_Z0) +
-                        _vertices[1]->texturePosition[1] * __beta  / (_1_Zp / _1_Z1) +
-                        _vertices[2]->texturePosition[1] * __gamma / (_1_Zp / _1_Z2);
-
-                    if (__u < 0 || __v < 0 ||
-                        __u > _vertices[0]->texture->getWidth() ||
-                        __v >= _vertices[0]->texture->getHeight())
-                    {
-                        continue;
-                    }
-                    auto __color = _vertices[0]->texture->get(PxCoordinate{ __u, __v });*/
                     putPixel(_x, _y, __alpha, __beta, __gamma, _outColorMap, _depthBuffer);
                 }
                 _beta += _dbetax;
                 _gamma += _dgammax;
-                _zp += _dzx;
             }
         }
     protected:
+        template <typename _Value>
+        inline _Value linearInterpolation(Float _alpha, Float _beta, Float _gamma,
+                                   const std::function<_Value(const Vertex3DOut*)>& _func) const
+        {
+            return _alpha * _func(_vertices[0]) +
+                _beta * _func(_vertices[1]) +
+                _gamma * _func(_vertices[2]);
+        }
+        template <typename _Value>
+        inline _Value perspectiveInterpolation(Float _alpha, Float _beta, Float _gamma,
+                                        const std::function<_Value(const Vertex3DOut*)>& _func) const
+        {
+            Float _1_Z0 = _nplain + _fplain - _vertices[0]->position[2] * (_nplain - _fplain);
+            Float _1_Z1 = _nplain + _fplain - _vertices[1]->position[2] * (_nplain - _fplain);
+            Float _1_Z2 = _nplain + _fplain - _vertices[2]->position[2] * (_nplain - _fplain);
+
+            Float _1_Zp =
+                (_nplain + _fplain -
+                 linearInterpolation<Float>(_alpha, _beta, _gamma,
+                                            [](const Vertex3DOut* _v) -> Float
+                                            {
+                                                return _v->position[2];
+                                            }) * (_nplain - _fplain));
+            return
+                _func(_vertices[0]) * _alpha / (_1_Zp / _1_Z0) +
+                _func(_vertices[1]) * _beta / (_1_Zp / _1_Z1) +
+                _func(_vertices[2]) * _gamma / (_1_Zp / _1_Z2);
+        }
         virtual void putPixel(
             int _x, int _y, Float _alpha, Float _beta, Float _gamma,
             WritableColorMap* _colorMap, DepthBuffer& _depthBuffer) const
         {
             int _index = _y * _colorMap->getWidth() + _x;
-
-            Float _z0 = _vertices[0]->position[2];
-            Float _z1 = _vertices[1]->position[2];
-            Float _z2 = _vertices[2]->position[2];
-            Float _depth = _z0 * _alpha + _z1 * _beta + _z2 * _gamma;
-
+            Float _depth = linearInterpolation<Float>(
+                _alpha, _beta, _gamma,
+                [](const Vertex3DOut* _v)
+                {
+                    return _v->position[2];
+                });
             if (_depth <= _depthBuffer[_index])
             {
                 return;
             }
             _depthBuffer[_index] = _depth;
-            _colorMap->set(_index, Color(1,1,1,1));
+            _colorMap->set(_index, Color(1, 1, 1, 1));
+        }
+
+    };
+
+    class TextureTriangle3D : public Triangle3D
+    {
+    public:
+        TextureTriangle3D(const std::array<Vertex3DOut*, 3>& _vs) : Triangle3D(_vs) {}
+    protected:
+        virtual void putPixel(
+            int _x, int _y, Float _alpha, Float _beta, Float _gamma,
+            WritableColorMap* _colorMap, DepthBuffer& _depthBuffer) const override
+        {
+            int _index = _y * _colorMap->getWidth() + _x;
+
+            Float _depth = linearInterpolation<Float>(
+                _alpha, _beta, _gamma,
+                [](const Vertex3DOut* _v)
+                {
+                    return _v->position[2];
+                });
+            if (_depth <= _depthBuffer[_index])
+            {
+                return;
+            }
+
+            auto __u = perspectiveInterpolation<Float>(
+                _alpha, _beta, _gamma,
+                [](const Vertex3DOut* _v)
+                {
+                    auto _tv = static_cast<const TextureVertex3DOut*>(_v);
+                    return _tv->texturePosition[0];
+                });
+            auto __v = perspectiveInterpolation<Float>(
+                _alpha, _beta, _gamma,
+                [](const Vertex3DOut* _v)
+                {
+                    auto _tv = static_cast<const TextureVertex3DOut*>(_v);
+                    return _tv->texturePosition[1];
+                });
+
+            _depthBuffer[_index] = _depth;
+            _colorMap->set(_index,
+                           static_cast<const TextureVertex3DOut*>(_vertices[0])->
+                           texture->get(PxCoordinate{ __u, __v }));
         }
     };
 };

@@ -10,6 +10,5 @@ namespace lightroom
     using Vector = Eigen::Matrix<Float, _N, 1>;
     template <size_t _N>
     using Matrix = Eigen::Matrix<Float, _N, _N>;
-
 };
 #endif // !_LRMATH_UTILITY_

@@ -1,4 +1,4 @@
-#include "shading.hpp"
+#include "pipeline.hpp"
 #include <iostream>
 using namespace lightroom;
 using namespace std;
@@ -29,15 +29,15 @@ double lockFps(LockArgs& LockArgs)
 int main(int argc, char* argv[])
 {
     auto sm = new SequenceMap(PxCoordinate{ 1920, 1080 });
-    PipelineManager<Vertex3DIn, Vertex3DOut> pm(
+    PipelineManager<TextureVertex3DIn, TextureVertex3DOut, Line3D, TextureTriangle3D> pm(
         Camara(Vector<3>{ 100, 0, 0 }, Vector<3>{ -100, 0, 0 }, Vector<3>{ 0, 0, 1 }, AngleOfDegrees[78]),
         sm);
     auto texture = new ImageMap(L".\\test.png", PxCoordinate{ 1000, 1000 });
-    auto vs = std::vector<Vertex3DIn*>{
-        new TextureVertex3DIn{ Vector<3>(30, -25, -20), PxCoordinate(0, 1000),    texture },
-        new TextureVertex3DIn{ Vector<3>(30,  25, -20), PxCoordinate(1000, 1000), texture },
-        new TextureVertex3DIn{ Vector<3>(0,  25,  20),  PxCoordinate(1000, 0),    texture },
-        new TextureVertex3DIn{ Vector<3>(0, -25,  20),  PxCoordinate(0, 0),       texture } };
+    auto vs = std::vector<TextureVertex3DIn*>{
+        new TextureVertex3DIn{ Vector<3>(30, -60, -60), PxCoordinate(0,    1000), texture },
+        new TextureVertex3DIn{ Vector<3>(30,  60, -60), PxCoordinate(1000, 1000), texture },
+        new TextureVertex3DIn{ Vector<3>(30,  60,  60), PxCoordinate(1000, 0),    texture },
+        new TextureVertex3DIn{ Vector<3>(30, -60,  60), PxCoordinate(0,    0),    texture } };
 
     LARGE_INTEGER timers[2]{}, perfFreq{ 0 };
     QueryPerformanceFrequency(&perfFreq);

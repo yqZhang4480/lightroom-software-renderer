@@ -182,8 +182,8 @@
     <ClInclude Include="lrmath\lrmath_utility.hpp" />
     <ClInclude Include="lrmath\TransformMixer.hpp" />
     <ClInclude Include="lrutility.hpp" />
-    <ClInclude Include="shading.hpp" />
-    <ClInclude Include="shading\shading_utility.hpp" />
+    <ClInclude Include="pipeline.hpp" />
+    <ClInclude Include="pipeline\pipeline_utility.hpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

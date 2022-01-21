@@ -34,7 +34,6 @@ namespace lightroom
         virtual void whenRegisteredByLine(Line3D*) {}
     };
 
-
     class TextureVertex3DIn : public Vertex3DIn
     {
     public:
@@ -53,7 +52,7 @@ namespace lightroom
 
         TextureVertex3DOut(const TextureVertex3DIn* _vin,
                            PrimitiveInputType primitiveType) :
-            Vertex3DOut(vertexInRef, primitiveType),
+            Vertex3DOut(_vin, primitiveType),
             texturePosition(_vin->texturePosition), texture(_vin->texture) {}
     };
 };

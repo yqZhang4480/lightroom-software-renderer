@@ -19,10 +19,7 @@
     <ClInclude Include="drawing\GraphObj.hpp">
       <Filter>drawing</Filter>
     </ClInclude>
-    <ClInclude Include="shading.hpp" />
-    <ClInclude Include="shading\shading_utility.hpp">
-      <Filter>shading</Filter>
-    </ClInclude>
+    <ClInclude Include="pipeline.hpp" />
     <ClInclude Include="drawing\vertices.hpp">
       <Filter>drawing</Filter>
     </ClInclude>
@@ -32,6 +29,9 @@
     <ClInclude Include="drawing\color.hpp">
       <Filter>drawing</Filter>
     </ClInclude>
+    <ClInclude Include="pipeline\pipeline_utility.hpp">
+      <Filter>pipeline</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="lrmath">
@@ -40,8 +40,8 @@
     <Filter Include="drawing">
       <UniqueIdentifier>{fe8ec151-ad69-4cc8-843e-e34c15ffe89d}</UniqueIdentifier>
     </Filter>
-    <Filter Include="shading">
-      <UniqueIdentifier>{ed242360-73d3-4df0-b55a-68a8e3c52b50}</UniqueIdentifier>
+    <Filter Include="pipeline">
+      <UniqueIdentifier>{876c385f-7f13-44e6-906a-515d6e962c27}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
