@@ -25,28 +25,28 @@ double lockFps(LockArgs& LockArgs)
     return ticks;
 }
 
+
 int main(int argc, char* argv[])
 {
-    //auto tp = Homogeneous<4>(Vector<3>(0, 0, 20));
-    PipelineManager pm;
-
+    auto sm = new SequenceMap(PxCoordinate{ 1920, 1080 });
+    PipelineManager<Vertex3DIn, Vertex3DOut> pm(
+        Camara(Vector<3>{ 100, 0, 0 }, Vector<3>{ -100, 0, 0 }, Vector<3>{ 0, 0, 1 }, AngleOfDegrees[78]),
+        sm);
+    auto texture = new ImageMap(L".\\test.png", PxCoordinate{ 1000, 1000 });
+    auto vs = std::vector<Vertex3DIn*>{
+        new TextureVertex3DIn{ Vector<3>(30, -25, -20), PxCoordinate(0, 1000),    texture },
+        new TextureVertex3DIn{ Vector<3>(30,  25, -20), PxCoordinate(1000, 1000), texture },
+        new TextureVertex3DIn{ Vector<3>(0,  25,  20),  PxCoordinate(1000, 0),    texture },
+        new TextureVertex3DIn{ Vector<3>(0, -25,  20),  PxCoordinate(0, 0),       texture } };
 
     LARGE_INTEGER timers[2]{}, perfFreq{ 0 };
     QueryPerformanceFrequency(&perfFreq);
     int lockFPS = 200;
     LockArgs lockArgs{ 0, lockFPS, timers, perfFreq };
-    auto texture = new ImageMap(L".\\test.png", PxCoordinate{ 1000, 1000 });
     while (true)
     {
         pm.clear();
-        pm.useCamara(pm.addCamara(Vector<3>{ 100, 0, 0 }, Vector<3>{ -100, 0, 0 }, Vector<3>{ 0, 0, 1 }, AngleOfDegrees[78]));
-        pm.addGraphObject(PrimitiveType::TRIANGLE_FAN, {
-            {Vector<3>(30, -25, -20), PxCoordinate(0, 1000)},
-            {Vector<3>(30,  25, -20), PxCoordinate(1000, 1000)},
-            {Vector<3>( 0,  25,  20), PxCoordinate(1000, 0)},
-            {Vector<3>( 0, -25,  20), PxCoordinate(0, 0)}},
-            texture);
-        pm.addPointLight(Vector<3>(100, 0, 0), Color(1, 1, 0.5));
+        pm.addGraphObject(PrimitiveInputType::TRIANGLE_FAN, vs);
 
         if (GetAsyncKeyState(VK_F4))
         {
@@ -60,6 +60,7 @@ int main(int argc, char* argv[])
         //TransformMixer3D tm;
         //tm.translate(0.5, 0, 0);
         pm.render();
+        sm->wipe();
         //tp.apply(tm.getTransformMatrix());
 
     }

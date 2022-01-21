@@ -4,7 +4,7 @@
 namespace lightroom
 {
     template <size_t _N> requires (_N - 1 > 0)
-    class Homogeneous : public Vector<_N>
+        class Homogeneous : public Vector<_N>
     {
     public:
         Homogeneous(const Vector<_N - 1>& _normalCoordinate)

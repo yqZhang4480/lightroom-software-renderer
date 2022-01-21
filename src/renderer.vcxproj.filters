@@ -23,6 +23,15 @@
     <ClInclude Include="shading\shading_utility.hpp">
       <Filter>shading</Filter>
     </ClInclude>
+    <ClInclude Include="drawing\vertices.hpp">
+      <Filter>drawing</Filter>
+    </ClInclude>
+    <ClInclude Include="drawing\viewport.hpp">
+      <Filter>drawing</Filter>
+    </ClInclude>
+    <ClInclude Include="drawing\color.hpp">
+      <Filter>drawing</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="lrmath">
