@@ -16,6 +16,7 @@ namespace lightroom
         NONE, LINES, LINE_STRIP, LINE_LOOP, TRIANGLE_STRIP, TRIANGLE_FAN
     };
     using PxCoordinate = Eigen::Matrix<int, 2, 1>;
+    using UVCoordinate = Eigen::Matrix<Float, 2, 1>;
 
     class DepthBuffer : public std::vector<Float>
     {

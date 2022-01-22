@@ -178,12 +178,14 @@
     <ClInclude Include="drawing\GraphObj.hpp" />
     <ClInclude Include="drawing\vertices.hpp" />
     <ClInclude Include="drawing\viewport.hpp" />
+    <ClInclude Include="lightroom.hpp" />
     <ClInclude Include="lrmath.hpp" />
     <ClInclude Include="lrmath\lrmath_utility.hpp" />
     <ClInclude Include="lrmath\TransformMixer.hpp" />
     <ClInclude Include="lrutility.hpp" />
     <ClInclude Include="pipeline.hpp" />
     <ClInclude Include="pipeline\pipeline_utility.hpp" />
+    <ClInclude Include="Samples\texture.hpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

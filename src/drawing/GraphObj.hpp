@@ -375,47 +375,4 @@ namespace lightroom
 
     };
 
-    class TextureTriangle3D : public Triangle3D
-    {
-    public:
-        TextureTriangle3D(const std::array<Vertex3DOut*, 3>& _vs) : Triangle3D(_vs) {}
-    protected:
-        virtual void putPixel(
-            int _x, int _y, Float _alpha, Float _beta, Float _gamma,
-            WritableColorMap* _colorMap, DepthBuffer& _depthBuffer) const override
-        {
-            int _index = _y * _colorMap->getWidth() + _x;
-
-            Float _depth = linearInterpolation<Float>(
-                _alpha, _beta, _gamma,
-                [](const Vertex3DOut* _v)
-                {
-                    return _v->position[2];
-                });
-            if (_depth <= _depthBuffer[_index])
-            {
-                return;
-            }
-
-            auto __u = perspectiveInterpolation<Float>(
-                _alpha, _beta, _gamma,
-                [](const Vertex3DOut* _v)
-                {
-                    auto _tv = static_cast<const TextureVertex3DOut*>(_v);
-                    return _tv->texturePosition[0];
-                });
-            auto __v = perspectiveInterpolation<Float>(
-                _alpha, _beta, _gamma,
-                [](const Vertex3DOut* _v)
-                {
-                    auto _tv = static_cast<const TextureVertex3DOut*>(_v);
-                    return _tv->texturePosition[1];
-                });
-
-            _depthBuffer[_index] = _depth;
-            _colorMap->set(_index,
-                           static_cast<const TextureVertex3DOut*>(_vertices[0])->
-                           texture->get(PxCoordinate{ __u, __v }));
-        }
-    };
 };

@@ -78,6 +78,12 @@ namespace lightroom
         virtual ~ColorMap() {}
 
         virtual Color get(size_t _index) const = 0;
+        Color get(const UVCoordinate& _position) const
+        {
+            return get(PxCoordinate{
+                static_cast<int>(_position[0] * (_size[0] - 1)),
+                static_cast<int>(_position[1] * (_size[1] - 1)) });
+        }
         Color get(const PxCoordinate& _position) const
         {
             return get(_size[0] * _position[1] + _position[0]);
@@ -97,6 +103,7 @@ namespace lightroom
     public:
         WritableColorMap(const PxCoordinate& _size = { 0,0 }) : ColorMap(_size) {}
         virtual ~WritableColorMap() {}
+
         virtual void set(size_t _index, const Color& _color) = 0;
         void set(const PxCoordinate& _position, const Color& _color)
         {
@@ -162,6 +169,7 @@ namespace lightroom
         {
             _image = new IMAGE;
             loadimage(_image, _fileName, _size[0], _size[1], true);
+            
         }
         virtual ~ImageMap()
         {

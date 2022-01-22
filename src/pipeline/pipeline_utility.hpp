@@ -20,7 +20,19 @@ namespace lightroom
                const Vector<3>& _topDirection, Angle _fov) :
             position(_position), gazeDirection(_gazeDirection), topDirection(_topDirection), fov(_fov) {}
 
-        Float getN() const
+        void lookAt(const Vector<3>& _lookAtPosition)
+        {
+            auto& _g = gazeDirection;
+            auto& _t = topDirection;
+            gazeDirection = (_lookAtPosition - position.toOrdinary()).normalized();
+            topDirection[0] = (_t[0] * _g[1] - _t[1] * _g[0]) * _g[1] / (_g[0] * _g[0] + _g[1] * _g[1]);
+            topDirection[1] = -_g[0] * _t[0] / _g[1];
+        }
+        void apply(const Matrix<4>& _matrix)
+        {
+            position.apply(_matrix);
+        }
+        Float getNPlain() const
         {
             return -cos(fov / 2) / sin(fov / 2);
         }
@@ -86,7 +98,7 @@ namespace lightroom
 
             for (auto _graphObj : _graphObjects)
             {
-                _graphObj->draw(viewport.output, _depthBuffer, camara.getN(), camara.f);
+                _graphObj->draw(viewport.output, _depthBuffer, camara.getNPlain(), camara.f);
             }
             viewport.print();
 
@@ -257,8 +269,9 @@ namespace lightroom
         {
             TransformMixer3D _tm;
 
+            Float _t = static_cast<lightroom::Float>(viewport.getHeight()) / viewport.getWidth();
             Float _f = camara.f;
-            Float _n = camara.getN();
+            Float _n = camara.getNPlain();
             Matrix<4> _perspective, _ortho;
             _perspective <<
                 _n, 0, 0, 0,
@@ -267,8 +280,8 @@ namespace lightroom
                 0, 0, 1, 0;
             _ortho <<
                 1, 0, 0, 0,
-                0, 1, 0, 0,
-                0, 0, 2 / (_n - _f), -(_n + _f) / (_n - _f),
+                0, Float(1) / _t, 0, 0,
+                0, 0, Float(2) / (_n - _f), -(_n + _f) / (_n - _f),
                 0, 0, 0, 1;
 
             _tm.changeBase(

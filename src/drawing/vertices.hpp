@@ -34,25 +34,5 @@ namespace lightroom
         virtual void whenRegisteredByLine(Line3D*) {}
     };
 
-    class TextureVertex3DIn : public Vertex3DIn
-    {
-    public:
-        PxCoordinate texturePosition;
-        ColorMap* texture;
-
-        TextureVertex3DIn(const Vector<3>& position,
-                          const PxCoordinate& texturePosition, ColorMap* texture) :
-            Vertex3DIn(position), texturePosition(texturePosition), texture(texture) {}
-    };
-    class TextureVertex3DOut : public Vertex3DOut
-    {
-    public:
-        PxCoordinate texturePosition;
-        ColorMap* texture;
-
-        TextureVertex3DOut(const TextureVertex3DIn* _vin,
-                           PrimitiveInputType primitiveType) :
-            Vertex3DOut(_vin, primitiveType),
-            texturePosition(_vin->texturePosition), texture(_vin->texture) {}
-    };
+   
 };

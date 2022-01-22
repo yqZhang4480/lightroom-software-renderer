@@ -32,6 +32,10 @@
     <ClInclude Include="pipeline\pipeline_utility.hpp">
       <Filter>pipeline</Filter>
     </ClInclude>
+    <ClInclude Include="Samples\texture.hpp">
+      <Filter>Samples</Filter>
+    </ClInclude>
+    <ClInclude Include="lightroom.hpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="lrmath">
@@ -42,6 +46,9 @@
     </Filter>
     <Filter Include="pipeline">
       <UniqueIdentifier>{876c385f-7f13-44e6-906a-515d6e962c27}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Samples">
+      <UniqueIdentifier>{e57a9412-da40-45a6-b875-762e7285c0d2}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
