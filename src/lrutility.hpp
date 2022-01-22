@@ -22,7 +22,7 @@
 
 #ifndef _graphics_H_
 #define _graphics_H_
-#include <graphics.h>
+#include "easyx/graphics.h"
 #endif // !_graphics_H_
 
 #ifndef _vector_

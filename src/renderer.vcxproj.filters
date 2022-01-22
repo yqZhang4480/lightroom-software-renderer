@@ -36,6 +36,12 @@
       <Filter>Samples</Filter>
     </ClInclude>
     <ClInclude Include="lightroom.hpp" />
+    <ClInclude Include="easyx\graphics.h">
+      <Filter>easyx</Filter>
+    </ClInclude>
+    <ClInclude Include="easyx\easyx.h">
+      <Filter>easyx</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="lrmath">
@@ -49,6 +55,9 @@
     </Filter>
     <Filter Include="Samples">
       <UniqueIdentifier>{e57a9412-da40-45a6-b875-762e7285c0d2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="easyx">
+      <UniqueIdentifier>{bfa41b4d-c9a5-45bd-8a09-d5e5fa13594b}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>

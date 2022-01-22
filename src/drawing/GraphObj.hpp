@@ -345,14 +345,14 @@ namespace lightroom
             Float _1_Zp =
                 (_nplain + _fplain -
                  linearInterpolation<Float>(_alpha, _beta, _gamma,
-                                            [](const Vertex3DOut* _v) -> Float
+                                            [](const Vertex3DOut* _v)
                                             {
                                                 return _v->position[2];
                                             }) * (_nplain - _fplain));
             return
-                _func(_vertices[0]) * _alpha / (_1_Zp / _1_Z0) +
-                _func(_vertices[1]) * _beta / (_1_Zp / _1_Z1) +
-                _func(_vertices[2]) * _gamma / (_1_Zp / _1_Z2);
+                _func(_vertices[0]) * _alpha *  (_1_Z0 / _1_Zp) +
+                _func(_vertices[1]) * _beta  *  (_1_Z1 / _1_Zp) +
+                _func(_vertices[2]) * _gamma *  (_1_Z2 / _1_Zp);
         }
         virtual void putPixel(
             int _x, int _y, Float _alpha, Float _beta, Float _gamma,

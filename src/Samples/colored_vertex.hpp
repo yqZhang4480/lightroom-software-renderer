@@ -7,32 +7,29 @@ namespace lightroom
 {
     namespace sample
     {
-        class TextureVertex3DIn : public Vertex3DIn
+        class ColoredVertex3DIn : public Vertex3DIn
         {
         public:
-            UVCoordinate uvPosition;
-            ColorMap* texture;
+            Color color;
 
-            TextureVertex3DIn(const Vector<3>& position,
-                              const UVCoordinate& uvPosition, ColorMap* texture) :
-                Vertex3DIn(position), uvPosition(uvPosition), texture(texture) {}
+            ColoredVertex3DIn(const Vector<3>& position,
+                              const Color& color) :
+                Vertex3DIn(position), color(color) {}
         };
-        class TextureVertex3DOut : public Vertex3DOut
+        class ColoredVertex3DOut : public Vertex3DOut
         {
         public:
-            UVCoordinate uvPosition;
-            ColorMap* texture;
+            Color color;
 
-            TextureVertex3DOut(const TextureVertex3DIn* _vin,
+            ColoredVertex3DOut(const ColoredVertex3DIn* _vin,
                                PrimitiveInputType primitiveType) :
-                Vertex3DOut(_vin, primitiveType),
-                uvPosition(_vin->uvPosition), texture(_vin->texture) {}
+                Vertex3DOut(_vin, primitiveType), color(_vin->color) {}
         };
 
-        class TextureTriangle3D : public Triangle3D
+        class ColoredTriangle3D : public Triangle3D
         {
         public:
-            TextureTriangle3D(const std::array<Vertex3DOut*, 3>& _vs) : Triangle3D(_vs) {}
+            ColoredTriangle3D(const std::array<Vertex3DOut*, 3>& _vs) : Triangle3D(_vs) {}
         protected:
             virtual void putPixel(
                 int _x, int _y, Float _alpha, Float _beta, Float _gamma,
@@ -51,29 +48,20 @@ namespace lightroom
                     return;
                 }
 
-                auto __u = perspectiveInterpolation<Float>(
+                auto _color = perspectiveInterpolation<Color>(
                     _alpha, _beta, _gamma,
                     [](const Vertex3DOut* _v)
                     {
-                        auto _tv = static_cast<const TextureVertex3DOut*>(_v);
-                        return _tv->uvPosition[0];
-                    });
-                auto __v = perspectiveInterpolation<Float>(
-                    _alpha, _beta, _gamma,
-                    [](const Vertex3DOut* _v)
-                    {
-                        auto _tv = static_cast<const TextureVertex3DOut*>(_v);
-                        return _tv->uvPosition[1];
+                        auto _tv = static_cast<const ColoredVertex3DOut*>(_v);
+                        return _tv->color;
                     });
 
                 _depthBuffer[_index] = _depth;
-                _colorMap->set(_index,
-                               static_cast<const TextureVertex3DOut*>(_vertices[0])->
-                               texture->get(UVCoordinate{ __u, __v }));
+                _colorMap->set(_index, _color);
             }
         };
 
-        class TextureMain
+        class ColoredVertexMain
         {
         private:
             struct LockArgs
@@ -100,19 +88,24 @@ namespace lightroom
             }
             SequenceMap* output;
             ImageMap* texture;
-            std::vector<TextureVertex3DIn*> vs;
+            std::vector<ColoredVertex3DIn*> vs;
         public:
-            TextureMain() :
+            ColoredVertexMain() :
                 output(new SequenceMap(PxCoordinate{ 1920, 1080 })),
                 texture(new ImageMap(L".\\test.png", PxCoordinate{ 1000, 1000 })),
                 vs({
-                    new TextureVertex3DIn{ Vector<3>( 20, -25, -15), UVCoordinate(0, 1), texture },
-                    new TextureVertex3DIn{ Vector<3>( 20,  25, -15), UVCoordinate(1, 1), texture },
-                    new TextureVertex3DIn{ Vector<3>(-20,  25,  15), UVCoordinate(1, 0), texture },
-                    new TextureVertex3DIn{ Vector<3>(-20, -25,  15), UVCoordinate(0, 0), texture } })
+                    new ColoredVertex3DIn{ Vector<3>(-20, -20,  20), Color(0,0,1,1) },
+                    new ColoredVertex3DIn{ Vector<3>( 20, -20,  20), Color(1,0,1,1) },
+                    new ColoredVertex3DIn{ Vector<3>(-20,  20,  20), Color(0,1,1,1) },
+                    new ColoredVertex3DIn{ Vector<3>( 20,  20,  20), Color(1,1,1,1) },
+                    new ColoredVertex3DIn{ Vector<3>(-20, -20, -20), Color(0,0,0,1) },
+                    new ColoredVertex3DIn{ Vector<3>( 20, -20, -20), Color(1,0,0,1) },
+                    new ColoredVertex3DIn{ Vector<3>(-20,  20, -20), Color(0,1,0,1) },
+                    new ColoredVertex3DIn{ Vector<3>( 20,  20, -20), Color(1,1,0,1) } })
             {
-                auto camara = Camara(Vector<3>{ 100, 0, 0 }, Vector<3>{ -100, 0, 0 }, Vector<3>{ 0, 0, 1 }, AngleOfDegrees[78]);
-                PipelineManager<TextureVertex3DIn, TextureVertex3DOut, Line3D, TextureTriangle3D> pm(camara, output);
+                auto camara = Camara(Vector<3>{ 173, 0, 100 }, Vector<3>{ -173, 0, -100 }, Vector<3>{ -100, 0, 173 }, AngleOfDegrees[78]);
+
+                PipelineManager<ColoredVertex3DIn, ColoredVertex3DOut, Line3D, ColoredTriangle3D> pm(camara, output);
 
                 LARGE_INTEGER timers[2]{}, perfFreq{ 0 };
                 QueryPerformanceFrequency(&perfFreq);
@@ -120,8 +113,17 @@ namespace lightroom
                 LockArgs lockArgs{ 0, lockFPS, timers, perfFreq };
                 while (true)
                 {
+                    TransformMixer3D tm;
+                    tm.rotate(0, 0, 256);
+
+                    pm.camara.apply(tm.getTransformMatrix());
+                    //pm.camara.lookAt({ 0, 0, 0 });
+
                     pm.clear();
-                    pm.addGraphObject(PrimitiveInputType::TRIANGLE_FAN, vs);
+                    pm.addGraphObject(PrimitiveInputType::TRIANGLE_FAN,
+                                      { vs[0], vs[1], vs[2], vs[6], vs[4], vs[5], vs[1] });
+                    pm.addGraphObject(PrimitiveInputType::TRIANGLE_STRIP,
+                                      { vs[4],vs[5], vs[6], vs[7], vs[2], vs[3], vs[1], vs[7], vs[5]});
 
                     if (GetAsyncKeyState(VK_RMENU)) // right alt
                     {
@@ -132,21 +134,17 @@ namespace lightroom
 
                     std::cout << "FPS: " << (int)(1000 * perfFreq.QuadPart / deltapc) << " (lock: " << lockFPS << ")" << std::endl;
 
-                    TransformMixer3D tm;
-                    tm.rotate(0, 0, 256);
                     pm.render();
                     output->wipe();
-                    pm.camara.apply(tm.getTransformMatrix());
-                    //pm.camara.lookAt({ 0, 0, 0 });
                 }
             }
 
-            ~TextureMain()
+            ~ColoredVertexMain()
             {
                 delete output;
                 delete texture;
 
-                for (auto v : std::set<TextureVertex3DIn*>(vs.begin(), vs.end()))
+                for (auto v : std::set<ColoredVertex3DIn*>(vs.begin(), vs.end()))
                 {
                     delete v;
                 }

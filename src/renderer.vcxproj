@@ -178,6 +178,8 @@
     <ClInclude Include="drawing\GraphObj.hpp" />
     <ClInclude Include="drawing\vertices.hpp" />
     <ClInclude Include="drawing\viewport.hpp" />
+    <ClInclude Include="easyx\easyx.h" />
+    <ClInclude Include="easyx\graphics.h" />
     <ClInclude Include="lightroom.hpp" />
     <ClInclude Include="lrmath.hpp" />
     <ClInclude Include="lrmath\lrmath_utility.hpp" />

@@ -11,8 +11,8 @@ namespace lightroom
     struct Camara
     {
         Homogeneous<4> position;
-        Vector<3> gazeDirection;
-        Vector<3> topDirection;
+        Homogeneous<4> gazeDirection;
+        Homogeneous<4> topDirection;
         Angle fov;
         Float f = -10000;
 
@@ -22,15 +22,20 @@ namespace lightroom
 
         void lookAt(const Vector<3>& _lookAtPosition)
         {
+            gazeDirection.toOrdinary();
             auto& _g = gazeDirection;
-            auto& _t = topDirection;
-            gazeDirection = (_lookAtPosition - position.toOrdinary()).normalized();
-            topDirection[0] = (_t[0] * _g[1] - _t[1] * _g[0]) * _g[1] / (_g[0] * _g[0] + _g[1] * _g[1]);
-            topDirection[1] = -_g[0] * _t[0] / _g[1];
+            auto _t = topDirection.toOrdinary();
+            _g = Homogeneous<4>(Vector<3>(_lookAtPosition - position.toOrdinary()));
+            topDirection[0] = ((_g[1] * _g[1] + _g[2] * _g[2]) * _t[0] - _g[0] * (_g[1] * _t[1] + _g[2] * _t[2])) /
+                (_g[0] * _g[0] + _g[1] * _g[1] + _g[2] * _g[2]);
+            topDirection[1] = (topDirection[0] - _t[0]) * _g[1] / _g[0] + _t[1];
+            topDirection[2] = (topDirection[0] - _t[0]) * _g[2] / _g[0] + _t[2];
         }
         void apply(const Matrix<4>& _matrix)
         {
             position.apply(_matrix);
+            gazeDirection.apply(_matrix);
+            topDirection.apply(_matrix);
         }
         Float getNPlain() const
         {
@@ -286,9 +291,9 @@ namespace lightroom
 
             _tm.changeBase(
                 camara.position.toOrdinary(),
-                camara.topDirection.cross(-camara.gazeDirection),
-                camara.topDirection,
-                -camara.gazeDirection)
+                camara.topDirection.toOrdinary().cross(-camara.gazeDirection.toOrdinary()),
+                camara.topDirection.toOrdinary(),
+                -camara.gazeDirection.toOrdinary())
                 .apply(_perspective)
                 .apply(_ortho);
 
