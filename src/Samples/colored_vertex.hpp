@@ -111,10 +111,22 @@ namespace lightroom
                 QueryPerformanceFrequency(&perfFreq);
                 int lockFPS = 200;
                 LockArgs lockArgs{ 0, lockFPS, timers, perfFreq };
+
+                POINT cursorPos1, cursorPos2;
+                GetCursorPos(&cursorPos1);
                 while (true)
                 {
                     TransformMixer3D tm;
-                    tm.rotate(0, 0, 256);
+
+                    if (GetForegroundWindow() == GetHWnd())
+                    {
+                        GetCursorPos(&cursorPos2);
+
+                        int dx = cursorPos2.x - cursorPos1.x;
+                        cursorPos1 = cursorPos2;
+
+                        tm.rotate(0, 0, -dx * 128);
+                    }
 
                     pm.camara.apply(tm.getTransformMatrix());
                     //pm.camara.lookAt({ 0, 0, 0 });

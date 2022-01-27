@@ -42,6 +42,9 @@
     <ClInclude Include="easyx\easyx.h">
       <Filter>easyx</Filter>
     </ClInclude>
+    <ClInclude Include="Samples\colored_vertex.hpp">
+      <Filter>Samples</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="lrmath">

@@ -81,8 +81,8 @@ namespace lightroom
         Color get(const UVCoordinate& _position) const
         {
             return get(PxCoordinate{
-                static_cast<int>(_position[0] * (_size[0] - 1)),
-                static_cast<int>(_position[1] * (_size[1] - 1)) });
+                static_cast<int>(_position[0] * (_size[0] - 1) + Float(0.5)),
+                static_cast<int>(_position[1] * (_size[1] - 1) + Float(0.5)) });
         }
         Color get(const PxCoordinate& _position) const
         {

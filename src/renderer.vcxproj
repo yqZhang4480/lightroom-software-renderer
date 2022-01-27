@@ -187,6 +187,7 @@
     <ClInclude Include="lrutility.hpp" />
     <ClInclude Include="pipeline.hpp" />
     <ClInclude Include="pipeline\pipeline_utility.hpp" />
+    <ClInclude Include="Samples\colored_vertex.hpp" />
     <ClInclude Include="Samples\texture.hpp" />
   </ItemGroup>
   <ItemGroup>
