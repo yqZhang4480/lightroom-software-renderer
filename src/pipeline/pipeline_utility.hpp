@@ -43,67 +43,47 @@ namespace lightroom
         }
     };
 
-    class VertexProcessor
-    {
-    public:
-        void operator()(Vertex3DOut* _vout) {}
-    };
-    class VertexPostProcessor
-    {
-    public:
-        void operator()(Vertex3DOut* _vout) {}
-    };
-
     template <
         std::derived_from<Vertex3DIn> _VertexInType = Vertex3DIn,
         std::derived_from<Vertex3DOut> _VertexOutType = Vertex3DOut,
         std::derived_from<Line3D> _LineType = Line3D,
-        std::derived_from<Triangle3D> _TriangleType = Triangle3D,
-        typename _VertexProcessor = VertexProcessor,
-        typename _VertexPostProcessor = VertexPostProcessor>
-    class PipelineManager final
+        std::derived_from<Triangle3D> _TriangleType = Triangle3D>
+    class Pipeline final
     {
     public:
         Camara camara;
         Viewport viewport;
-        _VertexProcessor vertexProcessor;
-        _VertexPostProcessor vertexPostProcessor;
 
     private:
         using VertexInContainer = std::vector<_VertexInType*>;
         using VertexOutContainer = std::vector<_VertexOutType*>;
 
-        VertexOutContainer _vertexOuts;
-        std::vector<GraphObj3D*> _graphObjects;
+        VertexOutContainer _vertices;
+        std::vector<GraphObj3D*> _primitives;
         DepthBuffer _depthBuffer;
 
     public:
-        PipelineManager(const Camara& camara,
-                        WritableColorMap* output,
-                        const _VertexProcessor& vertexProcessor = {},
-                        const _VertexPostProcessor& vertexPostProcessor = {}) :
+        Pipeline(const Camara& camara,
+                        WritableColorMap* output) :
             _depthBuffer(viewport.getWidth() * viewport.getHeight(), -1),
             camara(camara),
-            viewport(output),
-            vertexProcessor(vertexProcessor),
-            vertexPostProcessor(vertexPostProcessor) {}
-        ~PipelineManager()
+            viewport(output) {}
+        ~Pipeline()
         {
             clear();
         }
 
         void render()
         {
-            _verticesProcess();
             _mvpTransform();
             _perspectiveDivision();
             _viewportTransform();
             _assemble();
             _verticesPostProcess();
 
-            for (auto _graphObj : _graphObjects)
+            for (auto _primitive : _primitives)
             {
-                _graphObj->draw(viewport.output, _depthBuffer, camara.getNPlain(), camara.f);
+                _primitive->draw(viewport.output, _depthBuffer, camara.getNPlain(), camara.f);
             }
             viewport.print();
 
@@ -116,14 +96,14 @@ namespace lightroom
             _deleteAndClearVertices();
         }
 
-        void addGraphObject(
+        void input(
                 PrimitiveInputType _objType, const VertexInContainer& _vertexIns)
         {
             for (auto _v : _vertexIns)
             {
-                _vertexOuts.push_back(new _VertexOutType(_v, _objType));
+                _vertices.push_back(new _VertexOutType(_v, _objType));
             }
-            _vertexOuts.push_back(new _VertexOutType(_vertexIns[0], PrimitiveInputType::NONE));
+            _vertices.push_back(new _VertexOutType(_vertexIns[0], PrimitiveInputType::NONE));
         }
 
     private:
@@ -131,40 +111,39 @@ namespace lightroom
         {
             _depthBuffer.clear();
 
-            for (auto _go : _graphObjects)
+            for (auto _go : _primitives)
             {
                 delete _go;
             }
-            _graphObjects.clear();
+            _primitives.clear();
         }
         void _deleteAndClearVertices()
         {
-            // ASSERT _v1, _v2 in _vertexOuts, _v1 != _v2;
-            for (auto _v : _vertexOuts)
+            // ASSERT _v1, _v2 in _vertices, _v1 != _v2;
+            for (auto _v : _vertices)
             {
                 delete _v;
             }
-            _vertexOuts.clear();
+            _vertices.clear();
         }
 
-        inline void _verticesProcess()
-        {
-            std::for_each(_vertexOuts.begin(), _vertexOuts.end(), vertexProcessor);
-        }
         inline void _verticesPostProcess()
         {
-            std::for_each(_vertexOuts.begin(), _vertexOuts.end(), vertexPostProcessor);
+            for (auto _v : _vertices)
+            {
+                _v->afterAssemble();
+            }
         }
 
         void _assemble()
         {
-            auto _end = _vertexOuts.end();
-            auto _first = _vertexOuts.begin();
+            auto _end = _vertices.end();
+            auto _first = _vertices.begin();
             if (_end == _first)
             {
                 return;
             }
-            for (auto _last = _vertexOuts.begin(); ++_last != _end;)
+            for (auto _last = _vertices.begin(); ++_last != _end;)
             {
                 if ((*_last)->primitiveType != (*_first)->primitiveType)
                 {
@@ -206,7 +185,7 @@ namespace lightroom
         {
             for (auto _i = _begin, _j = ++_begin; _i != _end && _j != _end; ++++_i, ++++_j)
             {
-                _graphObjects.push_back(new _LineType({ *_i, *_j }));
+                _primitives.push_back(new _LineType({ *_i, *_j }));
             }
         }
         inline void _assembleLineStrip(
@@ -220,7 +199,7 @@ namespace lightroom
             }
             for (_i, _j; _j != _end; ++_i, ++_j)
             {
-                _graphObjects.push_back(new _LineType({ *_i, *_j }));
+                _primitives.push_back(new _LineType({ *_i, *_j }));
             }
         }
         inline void _assembleLineLoop(
@@ -234,9 +213,9 @@ namespace lightroom
             }
             for (_i, _j; _j != _end; ++_i, ++_j)
             {
-                _graphObjects.push_back(new _LineType({ *_i, *_j }));
+                _primitives.push_back(new _LineType({ *_i, *_j }));
             }
-            _graphObjects.push_back(new _LineType({ *_i, *_begin }));
+            _primitives.push_back(new _LineType({ *_i, *_begin }));
         }
         inline void _assembleTriangleStrip(
             VertexOutContainer::iterator _begin, VertexOutContainer::iterator _end)
@@ -251,7 +230,7 @@ namespace lightroom
             
             for (_i, _j, _k; _k != _end; ++_i, ++_j, ++_k)
             {
-                _graphObjects.push_back(new _TriangleType({ *_i, *_j, *_k }));
+                _primitives.push_back(new _TriangleType({ *_i, *_j, *_k }));
             }
         }
         inline void _assembleTriangleFan(
@@ -266,7 +245,7 @@ namespace lightroom
             }
             for (_j, _k; _k != _end; ++_j, ++_k)
             {
-                _graphObjects.push_back(new _TriangleType({ *_i, *_j, *_k }));
+                _primitives.push_back(new _TriangleType({ *_i, *_j, *_k }));
             }
         }
 
@@ -297,14 +276,14 @@ namespace lightroom
                 .apply(_perspective)
                 .apply(_ortho);
 
-            for (auto _v : _vertexOuts)
+            for (auto _v : _vertices)
             {
                 _v->apply(_tm.getTransformMatrix());
             }
         }
         void _perspectiveDivision()
         {
-            for (auto _v : _vertexOuts)
+            for (auto _v : _vertices)
             {
                 _v->position.divide();
             }
@@ -315,7 +294,7 @@ namespace lightroom
             _tm.scale(viewport.getWidth() / 2.0, -viewport.getHeight() / 2.0, 1)
                 .translate((viewport.getWidth() - 1.0) / 2, (viewport.getHeight() - 1.0) / 2, 0);
 
-            for (auto _v : _vertexOuts)
+            for (auto _v : _vertices)
             {
                 _v->apply(_tm.getTransformMatrix());
             }

@@ -112,7 +112,7 @@ namespace lightroom
                     new TextureVertex3DIn{ Vector<3>(-20, -25,  15), UVCoordinate(0, 0), texture } })
             {
                 auto camara = Camara(Vector<3>{ 100, 0, 0 }, Vector<3>{ -100, 0, 0 }, Vector<3>{ 0, 0, 1 }, AngleOfDegrees[78]);
-                PipelineManager<TextureVertex3DIn, TextureVertex3DOut, Line3D, TextureTriangle3D> pm(camara, output);
+                Pipeline<TextureVertex3DIn, TextureVertex3DOut, Line3D, TextureTriangle3D> pm(camara, output);
 
                 LARGE_INTEGER timers[2]{}, perfFreq{ 0 };
                 QueryPerformanceFrequency(&perfFreq);
@@ -121,7 +121,7 @@ namespace lightroom
                 while (true)
                 {
                     pm.clear();
-                    pm.addGraphObject(PrimitiveInputType::TRIANGLE_FAN, vs);
+                    pm.input(PrimitiveInputType::TRIANGLE_FAN, vs);
 
                     if (GetAsyncKeyState(VK_RMENU)) // right alt
                     {

@@ -4,32 +4,39 @@
 namespace lightroom
 {
     template <size_t _N> requires (_N - 1 > 0)
-        class Homogeneous : public Vector<_N>
+    class Homogeneous : public Vector<_N>
     {
     public:
-        Homogeneous(const Vector<_N - 1>& _normalCoordinate)
+        inline Homogeneous(const Vector<_N - 1>& _ordinaryCoordinate)
         {
-            _overwrite_vector<_N - 1, _N>(_normalCoordinate, *this);
+            _overwrite_vector<_N - 1, _N>(_ordinaryCoordinate, *this);
             (*this)[_N - 1] = 1;
         }
-        Homogeneous(const Vector<_N>& _homogeneousCoordinate) : Vector<_N>(_homogeneousCoordinate) {}
+        inline Homogeneous(const Vector<_N>& _homogeneousCoordinate) :
+            Vector<_N>(_homogeneousCoordinate) {}
 
         inline void divide()
         {
             *this /= (*this)[_N - 1];
         }
-        Vector<_N - 1> toOrdinary()
+        inline Vector<_N - 1> toOrdinary()
         {
             Vector<_N - 1> _ret;
-            if ((*this)[_N - 1] != 0)
-            {
-                divide();
-            }
+            divide();
             _overwrite_vector<_N, _N - 1>(*this, _ret);
             return _ret;
         }
+        inline Vector<_N - 1> toOrdinary() const
+        {
+            Vector<_N - 1> _ret;
+            for (size_t _i = 0; _i < _N - 1; _i++)
+            {
+                _ret[_i] = (*this)[_i] / (*this)[_N - 1];
+            }
+            return _ret;
+        }
         using Vector<_N>::operator=;
-        Homogeneous<_N>& apply(const Matrix<_N>& _transformMatrix)
+        inline Homogeneous<_N>& apply(const Matrix<_N>& _transformMatrix)
         {
             *this = _transformMatrix * (*this);
             return *this;

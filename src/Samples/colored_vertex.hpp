@@ -105,7 +105,7 @@ namespace lightroom
             {
                 auto camara = Camara(Vector<3>{ 173, 0, 100 }, Vector<3>{ -173, 0, -100 }, Vector<3>{ -100, 0, 173 }, AngleOfDegrees[78]);
 
-                PipelineManager<ColoredVertex3DIn, ColoredVertex3DOut, Line3D, ColoredTriangle3D> pm(camara, output);
+                Pipeline<ColoredVertex3DIn, ColoredVertex3DOut, Line3D, ColoredTriangle3D> pm(camara, output);
 
                 LARGE_INTEGER timers[2]{}, perfFreq{ 0 };
                 QueryPerformanceFrequency(&perfFreq);
@@ -132,9 +132,9 @@ namespace lightroom
                     //pm.camara.lookAt({ 0, 0, 0 });
 
                     pm.clear();
-                    pm.addGraphObject(PrimitiveInputType::TRIANGLE_FAN,
+                    pm.input(PrimitiveInputType::TRIANGLE_FAN,
                                       { vs[0], vs[1], vs[2], vs[6], vs[4], vs[5], vs[1] });
-                    pm.addGraphObject(PrimitiveInputType::TRIANGLE_STRIP,
+                    pm.input(PrimitiveInputType::TRIANGLE_STRIP,
                                       { vs[4],vs[5], vs[6], vs[7], vs[2], vs[3], vs[1], vs[7], vs[5]});
 
                     if (GetAsyncKeyState(VK_RMENU)) // right alt
