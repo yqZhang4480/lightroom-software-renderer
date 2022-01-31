@@ -10,9 +10,9 @@ namespace lightroom
 
     struct Camara
     {
-        Homogeneous<4> position;
-        Homogeneous<4> gazeDirection;
-        Homogeneous<4> topDirection;
+        Homogeneous position;
+        Homogeneous gazeDirection;
+        Homogeneous topDirection;
         Angle fov;
         Float f = -10000;
 
@@ -22,10 +22,10 @@ namespace lightroom
 
         void lookAt(const Vector<3>& _lookAtPosition)
         {
-            gazeDirection.toOrdinary();
+            gazeDirection.toCartesian();
             auto& _g = gazeDirection;
-            auto _t = topDirection.toOrdinary();
-            _g = Homogeneous<4>(Vector<3>(_lookAtPosition - position.toOrdinary()));
+            auto _t = topDirection.toCartesian();
+            _g = Homogeneous(Vector<3>(_lookAtPosition - position.toCartesian()));
             topDirection[0] = ((_g[1] * _g[1] + _g[2] * _g[2]) * _t[0] - _g[0] * (_g[1] * _t[1] + _g[2] * _t[2])) /
                 (_g[0] * _g[0] + _g[1] * _g[1] + _g[2] * _g[2]);
             topDirection[1] = (topDirection[0] - _t[0]) * _g[1] / _g[0] + _t[1];
@@ -269,16 +269,16 @@ namespace lightroom
                 0, 0, 0, 1;
 
             _tm.changeBase(
-                camara.position.toOrdinary(),
-                camara.topDirection.toOrdinary().cross(-camara.gazeDirection.toOrdinary()),
-                camara.topDirection.toOrdinary(),
-                -camara.gazeDirection.toOrdinary())
+                camara.position.toCartesian(),
+                camara.topDirection.toCartesian().cross(-camara.gazeDirection.toCartesian()),
+                camara.topDirection.toCartesian(),
+                -camara.gazeDirection.toCartesian())
                 .apply(_perspective)
                 .apply(_ortho);
 
             for (auto _v : _vertices)
             {
-                _v->apply(_tm.getTransformMatrix());
+                _v->apply(_tm);
             }
         }
         void _perspectiveDivision()
@@ -296,7 +296,7 @@ namespace lightroom
 
             for (auto _v : _vertices)
             {
-                _v->apply(_tm.getTransformMatrix());
+                _v->apply(_tm);
             }
         }
     };

@@ -7,14 +7,14 @@ namespace lightroom
     class Vertex3DIn
     {
     public:
-        Homogeneous<4> position;
+        Homogeneous position;
         Vertex3DIn(const Vector<3>& position) : position(position) {}
     };
     class Vertex3DOut
     {
     public:
         PrimitiveInputType primitiveType;
-        Homogeneous<4> position;
+        Homogeneous position;
         const Vertex3DIn* vertexInRef;
 
         Vertex3DOut(const Vertex3DIn* _vin,

@@ -240,9 +240,9 @@ namespace lightroom
         }
         Vector<3> evaluateNormal() const
         {
-            auto _p0 = _vertices[0]->position.toOrdinary();
-            auto&& _p1 = _vertices[1]->position.toOrdinary();
-            auto&& _p2 = _vertices[2]->position.toOrdinary();
+            auto _p0 = _vertices[0]->position.toCartesian();
+            auto&& _p1 = _vertices[1]->position.toCartesian();
+            auto&& _p2 = _vertices[2]->position.toCartesian();
             return ((_p1 - _p0).cross(_p2 - _p0)).normalized();
         }
 

@@ -111,12 +111,12 @@ namespace lightroom
                     new TextureVertex3DIn{ Vector<3>(-20,  25,  15), UVCoordinate(1, 0), texture },
                     new TextureVertex3DIn{ Vector<3>(-20, -25,  15), UVCoordinate(0, 0), texture } })
             {
-                auto camara = Camara(Vector<3>{ 100, 0, 0 }, Vector<3>{ -100, 0, 0 }, Vector<3>{ 0, 0, 1 }, AngleOfDegrees[78]);
+                auto camara = Camara(Vector<3>{ 100, 0, 0 }, Vector<3>{ -100, 0, 0 }, Vector<3>{ 0, 0, 1 }, 1.36);
                 Pipeline<TextureVertex3DIn, TextureVertex3DOut, Line3D, TextureTriangle3D> pm(camara, output);
 
                 LARGE_INTEGER timers[2]{}, perfFreq{ 0 };
                 QueryPerformanceFrequency(&perfFreq);
-                int lockFPS = 200;
+                size_t lockFPS = 200;
                 LockArgs lockArgs{ 0, lockFPS, timers, perfFreq };
                 while (true)
                 {
@@ -132,11 +132,9 @@ namespace lightroom
 
                     std::cout << "FPS: " << (int)(1000 * perfFreq.QuadPart / deltapc) << " (lock: " << lockFPS << ")" << std::endl;
 
-                    TransformMixer3D tm;
-                    tm.rotate(0, 0, 256);
                     pm.render();
                     output->wipe();
-                    pm.camara.apply(tm.getTransformMatrix());
+                    pm.camara.apply(TransformMixer3D().rotate(0, 0, 0.02));
                     //pm.camara.lookAt({ 0, 0, 0 });
                 }
             }

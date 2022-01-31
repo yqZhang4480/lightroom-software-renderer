@@ -103,7 +103,7 @@ namespace lightroom
                     new ColoredVertex3DIn{ Vector<3>(-20,  20, -20), Color(0,1,0,1) },
                     new ColoredVertex3DIn{ Vector<3>( 20,  20, -20), Color(1,1,0,1) } })
             {
-                auto camara = Camara(Vector<3>{ 173, 0, 100 }, Vector<3>{ -173, 0, -100 }, Vector<3>{ -100, 0, 173 }, AngleOfDegrees[78]);
+                auto camara = Camara(Vector<3>{ 173, 0, 100 }, Vector<3>{ -173, 0, -100 }, Vector<3>{ -100, 0, 173 }, 1.36);
 
                 Pipeline<ColoredVertex3DIn, ColoredVertex3DOut, Line3D, ColoredTriangle3D> pm(camara, output);
 
@@ -116,8 +116,6 @@ namespace lightroom
                 GetCursorPos(&cursorPos1);
                 while (true)
                 {
-                    TransformMixer3D tm;
-
                     if (GetForegroundWindow() == GetHWnd())
                     {
                         GetCursorPos(&cursorPos2);
@@ -125,10 +123,9 @@ namespace lightroom
                         int dx = cursorPos2.x - cursorPos1.x;
                         cursorPos1 = cursorPos2;
 
-                        tm.rotate(0, 0, -dx * 128);
+                        pm.camara.apply(TransformMixer3D().rotate(0, 0, -dx * 0.01));
                     }
 
-                    pm.camara.apply(tm.getTransformMatrix());
                     //pm.camara.lookAt({ 0, 0, 0 });
 
                     pm.clear();
