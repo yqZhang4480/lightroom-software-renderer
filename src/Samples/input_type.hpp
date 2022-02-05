@@ -23,11 +23,11 @@ namespace lightroom
                 SetProcessDpiAwareness(PROCESS_SYSTEM_DPI_AWARE);
                 int w = GetSystemMetrics(SM_CXSCREEN);
                 int h = GetSystemMetrics(SM_CYSCREEN);
-                auto output = new SequenceMap(PxCoordinate{ w, h });
+                output = new SequenceMap(PxCoordinate{ w, h });
 
                 auto camara = Camara(Vector<3>(0, 0, 50), Vector<3>(0, 0, -1), Vector<3>(0, 1, 0), 1.36);
 
-                auto pm = Pipeline<Vertex3DIn, Vertex3D, Line3D<Vertex3D>, Triangle3D<Vertex3D>>(camara, output);
+                auto pm = Pipeline<Vertex3D, Line3D<Vertex3D>, Triangle3D<Vertex3D>>(camara, output);
 
                 pm.input(PrimitiveInputType::LINES, vs);
                 pm.render();

@@ -116,7 +116,7 @@ namespace lightroom
                 output = new SequenceMap(PxCoordinate{ w, h });
 
                 auto camara = Camara(Vector<3>{ 100, 0, 0 }, Vector<3>{ -100, 0, 0 }, Vector<3>{ 0, 0, 1 }, 1.36);
-                Pipeline<TextureVertex3DIn, TextureVertex3D, Line3D<TextureVertex3D>, TextureTriangle3D> pm(camara, output);
+                Pipeline<TextureVertex3D, Line3D<TextureVertex3D>, TextureTriangle3D> pm(camara, output);
 
                 LARGE_INTEGER timers[2]{}, perfFreq{ 0 };
                 QueryPerformanceFrequency(&perfFreq);

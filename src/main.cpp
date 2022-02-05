@@ -7,7 +7,7 @@ using namespace std;
 int main(int argc, char* argv[])
 {
     /// press enter to run next sample
-    auto sample1 = sample::InputTypeMain();
-    auto sample2 = sample::ColoredVertexMain();
-    auto sample3 = sample::TextureMain();
+    sample::InputTypeMain();
+    sample::ColoredVertexMain();
+    sample::TextureMain();
 }

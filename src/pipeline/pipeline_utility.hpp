@@ -44,7 +44,6 @@ namespace lightroom
     };
 
     template <
-        std::derived_from<Vertex3DIn> _VertexInType,
         std::derived_from<Vertex3D> _VertexType,
         std::derived_from<Line3D<_VertexType>> _LineType,
         std::derived_from<Triangle3D<_VertexType>> _TriangleType>
@@ -55,7 +54,6 @@ namespace lightroom
         Viewport viewport;
 
     private:
-        using VertexInContainer = std::vector<_VertexInType*>;
         using VertexContainer = std::vector<_VertexType*>;
 
         VertexContainer _vertices;
@@ -96,7 +94,8 @@ namespace lightroom
             _deleteAndClearVertices();
         }
 
-        inline void input(PrimitiveInputType _objType, const VertexInContainer& _vertexIns)
+        template <std::derived_from<Vertex3DIn> _VertexInType>
+        inline void input(PrimitiveInputType _objType, const std::vector<_VertexInType*>& _vertexIns)
         {
             for (auto _v : _vertexIns)
             {

@@ -26,7 +26,6 @@ namespace lightroom
     protected:
         inline ~Vertex3D();
         template <
-            std::derived_from<Vertex3DIn>,
             std::derived_from<Vertex3D> _VertexType,
             std::derived_from<Line3D<_VertexType>>,
             std::derived_from<Triangle3D<_VertexType>>>
