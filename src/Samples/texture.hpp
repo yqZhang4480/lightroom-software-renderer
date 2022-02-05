@@ -103,7 +103,6 @@ namespace lightroom
             std::vector<TextureVertex3DIn*> vs;
         public:
             TextureMain() :
-                output(new SequenceMap(PxCoordinate{ 1920, 1080 })),
                 texture(new ImageMap(L".\\test.png", PxCoordinate{ 1000, 1000 })),
                 vs({
                     new TextureVertex3DIn{ Vector<3>( 20, -25, -15), UVCoordinate(0, 1), texture },
@@ -111,6 +110,11 @@ namespace lightroom
                     new TextureVertex3DIn{ Vector<3>(-20,  25,  15), UVCoordinate(1, 0), texture },
                     new TextureVertex3DIn{ Vector<3>(-20, -25,  15), UVCoordinate(0, 0), texture } })
             {
+                SetProcessDpiAwareness(PROCESS_SYSTEM_DPI_AWARE);
+                int w = GetSystemMetrics(SM_CXSCREEN);
+                int h = GetSystemMetrics(SM_CYSCREEN);
+                output = new SequenceMap(PxCoordinate{ w, h });
+
                 auto camara = Camara(Vector<3>{ 100, 0, 0 }, Vector<3>{ -100, 0, 0 }, Vector<3>{ 0, 0, 1 }, 1.36);
                 Pipeline<TextureVertex3DIn, TextureVertex3D, Line3D<TextureVertex3D>, TextureTriangle3D> pm(camara, output);
 

@@ -87,12 +87,9 @@ namespace lightroom
                 return ticks;
             }
             SequenceMap* output;
-            ImageMap* texture;
             std::vector<ColoredVertex3DIn*> vs;
         public:
             ColoredVertexMain() :
-                output(new SequenceMap(PxCoordinate{ 1920, 1080 })),
-                texture(new ImageMap(L".\\test.png", PxCoordinate{ 1000, 1000 })),
                 vs({
                     new ColoredVertex3DIn{ Vector<3>(-20, -20,  20), Color(0,0,1,1) },
                     new ColoredVertex3DIn{ Vector<3>( 20, -20,  20), Color(1,0,1,1) },
@@ -103,6 +100,11 @@ namespace lightroom
                     new ColoredVertex3DIn{ Vector<3>(-20,  20, -20), Color(0,1,0,1) },
                     new ColoredVertex3DIn{ Vector<3>( 20,  20, -20), Color(1,1,0,1) } })
             {
+                SetProcessDpiAwareness(PROCESS_SYSTEM_DPI_AWARE);
+                int w = GetSystemMetrics(SM_CXSCREEN);
+                int h = GetSystemMetrics(SM_CYSCREEN);
+                output = new SequenceMap(PxCoordinate{ w, h });
+
                 auto camara = Camara(Vector<3>{ 173, 0, 100 }, Vector<3>{ -173, 0, -100 }, Vector<3>{ -100, 0, 173 }, 1.36);
 
                 Pipeline<ColoredVertex3DIn, ColoredVertex3D, Line3D<ColoredVertex3D>, ColoredTriangle3D> pm(camara, output);
@@ -151,7 +153,6 @@ namespace lightroom
             ~ColoredVertexMain()
             {
                 delete output;
-                delete texture;
 
                 for (auto v : std::set<ColoredVertex3DIn*>(vs.begin(), vs.end()))
                 {
