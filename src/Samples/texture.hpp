@@ -17,22 +17,22 @@ namespace lightroom
                               const UVCoordinate& uvPosition, ColorMap* texture) :
                 Vertex3DIn(position), uvPosition(uvPosition), texture(texture) {}
         };
-        class TextureVertex3DOut : public Vertex3DOut
+        class TextureVertex3D : public Vertex3D
         {
         public:
             UVCoordinate uvPosition;
             ColorMap* texture;
 
-            TextureVertex3DOut(const TextureVertex3DIn* _vin,
+            TextureVertex3D(const TextureVertex3DIn* _vin,
                                PrimitiveInputType primitiveType) :
-                Vertex3DOut(_vin, primitiveType),
+                Vertex3D(_vin, primitiveType),
                 uvPosition(_vin->uvPosition), texture(_vin->texture) {}
         };
 
-        class TextureTriangle3D : public Triangle3D
+        class TextureTriangle3D : public Triangle3D<TextureVertex3D>
         {
         public:
-            TextureTriangle3D(const std::array<Vertex3DOut*, 3>& _vs) : Triangle3D(_vs) {}
+            TextureTriangle3D(const std::array<TextureVertex3D*, 3>& _vs) : Triangle3D(_vs) {}
         protected:
             virtual void putPixel(
                 int _x, int _y, Float _alpha, Float _beta, Float _gamma,
@@ -42,7 +42,7 @@ namespace lightroom
 
                 Float _depth = linearInterpolation<Float>(
                     _alpha, _beta, _gamma,
-                    [](const Vertex3DOut* _v)
+                    [](const TextureVertex3D* _v)
                     {
                         return _v->position[2];
                     });
@@ -53,22 +53,22 @@ namespace lightroom
 
                 auto __u = perspectiveInterpolation<Float>(
                     _alpha, _beta, _gamma,
-                    [](const Vertex3DOut* _v)
+                    [](const TextureVertex3D* _v)
                     {
-                        auto _tv = static_cast<const TextureVertex3DOut*>(_v);
+                        auto _tv = static_cast<const TextureVertex3D*>(_v);
                         return _tv->uvPosition[0];
                     });
                 auto __v = perspectiveInterpolation<Float>(
                     _alpha, _beta, _gamma,
-                    [](const Vertex3DOut* _v)
+                    [](const TextureVertex3D* _v)
                     {
-                        auto _tv = static_cast<const TextureVertex3DOut*>(_v);
+                        auto _tv = static_cast<const TextureVertex3D*>(_v);
                         return _tv->uvPosition[1];
                     });
 
                 _depthBuffer[_index] = _depth;
                 _colorMap->set(_index,
-                               static_cast<const TextureVertex3DOut*>(_vertices[0])->
+                               static_cast<const TextureVertex3D*>(_vertices[0])->
                                texture->get(UVCoordinate{ __u, __v }));
             }
         };
@@ -112,7 +112,7 @@ namespace lightroom
                     new TextureVertex3DIn{ Vector<3>(-20, -25,  15), UVCoordinate(0, 0), texture } })
             {
                 auto camara = Camara(Vector<3>{ 100, 0, 0 }, Vector<3>{ -100, 0, 0 }, Vector<3>{ 0, 0, 1 }, 1.36);
-                Pipeline<TextureVertex3DIn, TextureVertex3DOut, Line3D, TextureTriangle3D> pm(camara, output);
+                Pipeline<TextureVertex3DIn, TextureVertex3D, Line3D<TextureVertex3D>, TextureTriangle3D> pm(camara, output);
 
                 LARGE_INTEGER timers[2]{}, perfFreq{ 0 };
                 QueryPerformanceFrequency(&perfFreq);

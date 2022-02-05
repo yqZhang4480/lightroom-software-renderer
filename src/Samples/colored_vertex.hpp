@@ -16,20 +16,20 @@ namespace lightroom
                               const Color& color) :
                 Vertex3DIn(position), color(color) {}
         };
-        class ColoredVertex3DOut : public Vertex3DOut
+        class ColoredVertex3D : public Vertex3D
         {
         public:
             Color color;
 
-            ColoredVertex3DOut(const ColoredVertex3DIn* _vin,
+            ColoredVertex3D(const ColoredVertex3DIn* _vin,
                                PrimitiveInputType primitiveType) :
-                Vertex3DOut(_vin, primitiveType), color(_vin->color) {}
+                Vertex3D(_vin, primitiveType), color(_vin->color) {}
         };
 
-        class ColoredTriangle3D : public Triangle3D
+        class ColoredTriangle3D : public Triangle3D<ColoredVertex3D>
         {
         public:
-            ColoredTriangle3D(const std::array<Vertex3DOut*, 3>& _vs) : Triangle3D(_vs) {}
+            ColoredTriangle3D(const std::array<ColoredVertex3D*, 3>& _vs) : Triangle3D<ColoredVertex3D>(_vs) {}
         protected:
             virtual void putPixel(
                 int _x, int _y, Float _alpha, Float _beta, Float _gamma,
@@ -39,7 +39,7 @@ namespace lightroom
 
                 Float _depth = linearInterpolation<Float>(
                     _alpha, _beta, _gamma,
-                    [](const Vertex3DOut* _v)
+                    [](const ColoredVertex3D* _v)
                     {
                         return _v->position[2];
                     });
@@ -50,9 +50,9 @@ namespace lightroom
 
                 auto _color = perspectiveInterpolation<Color>(
                     _alpha, _beta, _gamma,
-                    [](const Vertex3DOut* _v)
+                    [](const ColoredVertex3D* _v)
                     {
-                        auto _tv = static_cast<const ColoredVertex3DOut*>(_v);
+                        auto _tv = static_cast<const ColoredVertex3D*>(_v);
                         return _tv->color;
                     });
 
@@ -105,7 +105,7 @@ namespace lightroom
             {
                 auto camara = Camara(Vector<3>{ 173, 0, 100 }, Vector<3>{ -173, 0, -100 }, Vector<3>{ -100, 0, 173 }, 1.36);
 
-                Pipeline<ColoredVertex3DIn, ColoredVertex3DOut, Line3D, ColoredTriangle3D> pm(camara, output);
+                Pipeline<ColoredVertex3DIn, ColoredVertex3D, Line3D<ColoredVertex3D>, ColoredTriangle3D> pm(camara, output);
 
                 LARGE_INTEGER timers[2]{}, perfFreq{ 0 };
                 QueryPerformanceFrequency(&perfFreq);

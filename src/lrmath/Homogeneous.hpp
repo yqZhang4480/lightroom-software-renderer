@@ -16,8 +16,8 @@ namespace lightroom
         inline Vector<3> toCartesian();
         inline Vector<3> toCartesian() const;
         
-        // 应用变换矩阵
-        inline Homogeneous& apply(const lightroom::Matrix<4>& _transformMatrix);
+        // 应用变换
+        inline Homogeneous& apply(const TransformMixer3D& _mixer);
 
     private:
         template <size_t _SRC_SIZE, size_t _DST_SIZE>
@@ -51,9 +51,9 @@ namespace lightroom
         }
         return _ret;
     }
-    inline Homogeneous& Homogeneous::apply(const lightroom::Matrix<4>& _transformMatrix)
+    inline Homogeneous& Homogeneous::apply(const TransformMixer3D& _mixer)
     {
-        this->Vector<4>::operator=(_transformMatrix * (*this));
+        this->Vector<4>::operator=(lightroom::Matrix<4>(_mixer) * (*this));
         return *this;
     }
 

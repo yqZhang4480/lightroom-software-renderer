@@ -31,11 +31,11 @@ namespace lightroom
             topDirection[1] = (topDirection[0] - _t[0]) * _g[1] / _g[0] + _t[1];
             topDirection[2] = (topDirection[0] - _t[0]) * _g[2] / _g[0] + _t[2];
         }
-        void apply(const Matrix<4>& _matrix)
+        void apply(const TransformMixer3D& _mixer)
         {
-            position.apply(_matrix);
-            gazeDirection.apply(_matrix);
-            topDirection.apply(_matrix);
+            position.apply(_mixer);
+            gazeDirection.apply(_mixer);
+            topDirection.apply(_mixer);
         }
         Float getNPlain() const
         {
@@ -44,10 +44,10 @@ namespace lightroom
     };
 
     template <
-        std::derived_from<Vertex3DIn> _VertexInType = Vertex3DIn,
-        std::derived_from<Vertex3DOut> _VertexOutType = Vertex3DOut,
-        std::derived_from<Line3D> _LineType = Line3D,
-        std::derived_from<Triangle3D> _TriangleType = Triangle3D>
+        std::derived_from<Vertex3DIn> _VertexInType,
+        std::derived_from<Vertex3D> _VertexType,
+        std::derived_from<Line3D<_VertexType>> _LineType,
+        std::derived_from<Triangle3D<_VertexType>> _TriangleType>
     class Pipeline final
     {
     public:
@@ -56,9 +56,9 @@ namespace lightroom
 
     private:
         using VertexInContainer = std::vector<_VertexInType*>;
-        using VertexOutContainer = std::vector<_VertexOutType*>;
+        using VertexContainer = std::vector<_VertexType*>;
 
-        VertexOutContainer _vertices;
+        VertexContainer _vertices;
         std::vector<GraphObj3D*> _primitives;
         DepthBuffer _depthBuffer;
 
@@ -96,14 +96,13 @@ namespace lightroom
             _deleteAndClearVertices();
         }
 
-        void input(
-                PrimitiveInputType _objType, const VertexInContainer& _vertexIns)
+        inline void input(PrimitiveInputType _objType, const VertexInContainer& _vertexIns)
         {
             for (auto _v : _vertexIns)
             {
-                _vertices.push_back(new _VertexOutType(_v, _objType));
+                _vertices.push_back(new _VertexType(_v, _objType));
             }
-            _vertices.push_back(new _VertexOutType(_vertexIns[0], PrimitiveInputType::NONE));
+            _vertices.push_back(new _VertexType(_vertexIns[0], PrimitiveInputType::NONE));
         }
 
     private:
@@ -157,7 +156,7 @@ namespace lightroom
             }
         }
         void _assembleDeliver(
-            VertexOutContainer::iterator _begin, VertexOutContainer::iterator _end)
+            VertexContainer::iterator _begin, VertexContainer::iterator _end)
         {
             switch ((*_begin)->primitiveType)
             {
@@ -181,7 +180,7 @@ namespace lightroom
             }
         }
         inline void _assembleLines(
-            VertexOutContainer::iterator _begin, VertexOutContainer::iterator _end)
+            VertexContainer::iterator _begin, VertexContainer::iterator _end)
         {
             for (auto _i = _begin, _j = ++_begin; _i != _end && _j != _end; ++++_i, ++++_j)
             {
@@ -189,7 +188,7 @@ namespace lightroom
             }
         }
         inline void _assembleLineStrip(
-            VertexOutContainer::iterator _begin, VertexOutContainer::iterator _end)
+            VertexContainer::iterator _begin, VertexContainer::iterator _end)
         {
             auto _i = _begin;
             auto _j = ++_begin;
@@ -203,7 +202,7 @@ namespace lightroom
             }
         }
         inline void _assembleLineLoop(
-            VertexOutContainer::iterator _begin, VertexOutContainer::iterator _end)
+            VertexContainer::iterator _begin, VertexContainer::iterator _end)
         {
             auto _i = _begin;
             auto _j = ++_begin;
@@ -218,7 +217,7 @@ namespace lightroom
             _primitives.push_back(new _LineType({ *_i, *_begin }));
         }
         inline void _assembleTriangleStrip(
-            VertexOutContainer::iterator _begin, VertexOutContainer::iterator _end)
+            VertexContainer::iterator _begin, VertexContainer::iterator _end)
         {
             auto _i = _begin;
             auto _j = ++_begin;
@@ -234,7 +233,7 @@ namespace lightroom
             }
         }
         inline void _assembleTriangleFan(
-            VertexOutContainer::iterator _begin, VertexOutContainer::iterator _end)
+            VertexContainer::iterator _begin, VertexContainer::iterator _end)
         {
             auto _i = _begin;
             auto _j = ++_begin;

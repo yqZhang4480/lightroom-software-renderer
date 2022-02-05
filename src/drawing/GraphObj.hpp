@@ -12,11 +12,12 @@ namespace lightroom
         virtual ~GraphObj3D() {}
     };
 
+    template <std::derived_from<Vertex3D> _VertexType>
     class Line3D : public GraphObj3D
     {
-        std::array<Vertex3DOut*, 2> _vertices;
+        std::array<_VertexType*, 2> _vertices;
     public:
-        Line3D(const std::array<Vertex3DOut*, 2>& _vs) : _vertices(_vs)
+        Line3D(const std::array<_VertexType*, 2>& _vs) : _vertices(_vs)
         {
             for (auto& _v : _vs)
             {
@@ -198,7 +199,7 @@ namespace lightroom
         }
 
     private:
-        void _sortVertices(lightroom::Vertex3DOut*& _v0, lightroom::Vertex3DOut*& _v1) const
+        void _sortVertices(_VertexType*& _v0, _VertexType*& _v1) const
         {
             if (_v0->position[0] > _v1->position[0])
             {
@@ -206,16 +207,18 @@ namespace lightroom
             }
         }
     };
+
+    template <std::derived_from<Vertex3D> _VertexType>
     class Triangle3D : public GraphObj3D
     {
     protected:
-        std::array<Vertex3DOut*, 3> _vertices;
+        std::array<_VertexType*, 3> _vertices;
     private:
         mutable Float _nplain;
         mutable Float _fplain;
 
     public:
-        Triangle3D(const std::array<Vertex3DOut*, 3>& _vs) : _vertices(_vs)
+        Triangle3D(const std::array<_VertexType*, 3>& _vs) : _vertices(_vs)
         {
             for (auto _v : _vs)
             {
@@ -328,7 +331,7 @@ namespace lightroom
     protected:
         template <typename _Value>
         inline _Value linearInterpolation(Float _alpha, Float _beta, Float _gamma,
-                                   const std::function<_Value(const Vertex3DOut*)>& _func) const
+                                   const std::function<_Value(const _VertexType*)>& _func) const
         {
             return _alpha * _func(_vertices[0]) +
                 _beta * _func(_vertices[1]) +
@@ -336,7 +339,7 @@ namespace lightroom
         }
         template <typename _Value>
         inline _Value perspectiveInterpolation(Float _alpha, Float _beta, Float _gamma,
-                                        const std::function<_Value(const Vertex3DOut*)>& _func) const
+                                        const std::function<_Value(const _VertexType*)>& _func) const
         {
             Float _1_Z0 = _nplain + _fplain - _vertices[0]->position[2] * (_nplain - _fplain);
             Float _1_Z1 = _nplain + _fplain - _vertices[1]->position[2] * (_nplain - _fplain);
@@ -345,7 +348,7 @@ namespace lightroom
             Float _1_Zp =
                 (_nplain + _fplain -
                  linearInterpolation<Float>(_alpha, _beta, _gamma,
-                                            [](const Vertex3DOut* _v)
+                                            [](const _VertexType* _v)
                                             {
                                                 return _v->position[2];
                                             }) * (_nplain - _fplain));
@@ -359,17 +362,7 @@ namespace lightroom
             WritableColorMap* _colorMap, DepthBuffer& _depthBuffer) const
         {
             int _index = _y * _colorMap->getWidth() + _x;
-            Float _depth = linearInterpolation<Float>(
-                _alpha, _beta, _gamma,
-                [](const Vertex3DOut* _v)
-                {
-                    return _v->position[2];
-                });
-            if (_depth <= _depthBuffer[_index])
-            {
-                return;
-            }
-            _depthBuffer[_index] = _depth;
+
             _colorMap->set(_index, Color(1, 1, 1, 1));
         }
 

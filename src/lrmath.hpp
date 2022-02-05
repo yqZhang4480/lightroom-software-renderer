@@ -2,7 +2,7 @@
 #ifndef _LRMATH_
 #define _LRMATH_
 
-#include "lrmath/Homogeneous.hpp"
 #include "lrmath/TransformMixer.hpp"
+#include "lrmath/Homogeneous.hpp"
 
 #endif // !_LRMATH_
