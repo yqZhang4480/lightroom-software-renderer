@@ -123,7 +123,7 @@ namespace lightroom
                     pm.clear();
                     pm.input(PrimitiveInputType::TRIANGLE_FAN, vs);
 
-                    if (GetAsyncKeyState(VK_RMENU)) // right alt
+                    if (GetAsyncKeyState('\r'))
                     {
                         break;
                     }

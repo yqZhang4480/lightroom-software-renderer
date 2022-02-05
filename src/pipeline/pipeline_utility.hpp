@@ -204,8 +204,9 @@ namespace lightroom
         inline void _assembleLineLoop(
             VertexContainer::iterator _begin, VertexContainer::iterator _end)
         {
-            auto _i = _begin;
-            auto _j = ++_begin;
+            auto __begin = _begin;
+            auto _i = __begin;
+            auto _j = ++__begin;
             if (_i == _end || _j == _end)
             {
                 return;

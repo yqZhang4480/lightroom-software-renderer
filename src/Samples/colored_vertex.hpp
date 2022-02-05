@@ -134,7 +134,7 @@ namespace lightroom
                     pm.input(PrimitiveInputType::TRIANGLE_STRIP,
                                       { vs[4],vs[5], vs[6], vs[7], vs[2], vs[3], vs[1], vs[7], vs[5]});
 
-                    if (GetAsyncKeyState(VK_RMENU)) // right alt
+                    if (GetAsyncKeyState('\r'))
                     {
                         break;
                     }

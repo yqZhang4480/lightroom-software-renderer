@@ -196,6 +196,7 @@
   <ItemGroup>
     <ClCompile Include="lrmath\Homogeneous.hpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="Samples\input_type.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

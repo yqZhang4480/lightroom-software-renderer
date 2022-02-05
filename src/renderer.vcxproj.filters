@@ -68,5 +68,8 @@
       <Filter>lrmath</Filter>
     </ClCompile>
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="Samples\input_type.hpp">
+      <Filter>Samples</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

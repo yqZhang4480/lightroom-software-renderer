@@ -9,7 +9,6 @@ namespace lightroom
         Viewport(WritableColorMap* output, LPRECT lpRect = nullptr, const int _flag = EW_SHOWCONSOLE) :
             output(output)
         {
-            SetProcessDpiAwareness(PROCESS_SYSTEM_DPI_AWARE);
             int max_w = GetSystemMetrics(SM_CXSCREEN);
             int max_h = GetSystemMetrics(SM_CYSCREEN);
             int left, top;
