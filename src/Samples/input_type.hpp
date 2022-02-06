@@ -7,6 +7,12 @@ namespace lightroom
 {
     namespace sample
     {
+        class BasicVertex3D : public Vertex3D
+        {
+        public:
+            BasicVertex3D(const Vertex3DIn* vin, PrimitiveInputType p) : Vertex3D(vin, p) {}
+        };
+
         class InputTypeMain
         {
         private:
@@ -27,7 +33,7 @@ namespace lightroom
 
                 auto camara = Camara(Vector<3>(0, 0, 50), Vector<3>(0, 0, -1), Vector<3>(0, 1, 0), 1.36);
 
-                auto pm = Pipeline<Vertex3D, Line3D<Vertex3D>, Triangle3D<Vertex3D>>(camara, output);
+                auto pm = Pipeline<BasicVertex3D, Line3D<BasicVertex3D>, Triangle3D<BasicVertex3D>>(camara, output);
 
                 pm.input(PrimitiveInputType::LINES, vs);
                 pm.render();

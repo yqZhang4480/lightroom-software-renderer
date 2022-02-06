@@ -21,7 +21,7 @@ namespace lightroom
         inline Vertex3D(const Vertex3DIn* _vin, PrimitiveInputType primitiveType);
 
         // Ó¦ÓÃ±ä»»¾ØÕó
-        inline void apply(const TransformMixer3D& _transformMatrix);
+        inline void apply(const TransformMixer3D& _mixer);
 
     protected:
         inline ~Vertex3D();
@@ -47,14 +47,14 @@ namespace lightroom
     inline Vertex3D::Vertex3D(const Vertex3DIn* _vin,
              PrimitiveInputType primitiveType) :
         primitiveType(primitiveType), position(_vin->position), vertexInRef(_vin) {}
-    Vertex3D::~Vertex3D() {}
-    inline void Vertex3D::apply(const TransformMixer3D& _transformMatrix)
+    inline Vertex3D::~Vertex3D() {}
+    inline void Vertex3D::apply(const TransformMixer3D& _mixer)
     {
-        position.apply(_transformMatrix);
+        position.apply(_mixer);
     }
     template <typename _VertexType>
-    void Vertex3D::whenRegisteredByTriangle(Triangle3D<_VertexType>*) {}
+    inline void Vertex3D::whenRegisteredByTriangle(Triangle3D<_VertexType>*) {}
     template <typename _VertexType>
-    void Vertex3D::whenRegisteredByLine(Line3D<_VertexType>*) {}
-    void Vertex3D::afterAssemble() {}
+    inline void Vertex3D::whenRegisteredByLine(Line3D<_VertexType>*) {}
+    inline void Vertex3D::afterAssemble() {}
 };

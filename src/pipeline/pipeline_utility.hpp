@@ -54,7 +54,7 @@ namespace lightroom
         Viewport viewport;
 
     private:
-        using VertexContainer = std::vector<_VertexType*>;
+        using VertexContainer = std::vector<_VertexType>;
 
         VertexContainer _vertices;
         std::vector<GraphObj3D*> _primitives;
@@ -85,27 +85,27 @@ namespace lightroom
             }
             viewport.print();
 
-            _deleteAndClearInternalData();
+            _clearInternalData();
         }
 
         void clear()
         {
-            _deleteAndClearInternalData();
-            _deleteAndClearVertices();
+            _clearInternalData();
+            _clearVertices();
         }
 
         template <std::derived_from<Vertex3DIn> _VertexInType>
-        inline void input(PrimitiveInputType _objType, const std::vector<_VertexInType*>& _vertexIns)
+        inline void input(PrimitiveInputType _inputType, const std::vector<_VertexInType*>& _vertexIns)
         {
-            for (auto _v : _vertexIns)
+            for (auto& _v : _vertexIns)
             {
-                _vertices.push_back(new _VertexType(_v, _objType));
+                _vertices.emplace_back(_v, _inputType);
             }
-            _vertices.push_back(new _VertexType(_vertexIns[0], PrimitiveInputType::NONE));
+            _vertices.emplace_back(_vertexIns[0], PrimitiveInputType::NONE);
         }
 
     private:
-        void _deleteAndClearInternalData()
+        void _clearInternalData()
         {
             _depthBuffer.clear();
 
@@ -115,21 +115,16 @@ namespace lightroom
             }
             _primitives.clear();
         }
-        void _deleteAndClearVertices()
+        void _clearVertices()
         {
-            // ASSERT _v1, _v2 in _vertices, _v1 != _v2;
-            for (auto _v : _vertices)
-            {
-                delete _v;
-            }
             _vertices.clear();
         }
 
         inline void _verticesPostProcess()
         {
-            for (auto _v : _vertices)
+            for (auto& _v : _vertices)
             {
-                _v->afterAssemble();
+                _v.afterAssemble();
             }
         }
 
@@ -143,7 +138,7 @@ namespace lightroom
             }
             for (auto _last = _vertices.begin(); ++_last != _end;)
             {
-                if ((*_last)->primitiveType != (*_first)->primitiveType)
+                if ((*_last).primitiveType != (*_first).primitiveType)
                 {
                     _assembleDeliver(_first, _last);
                     _first = ++_last;
@@ -157,7 +152,7 @@ namespace lightroom
         void _assembleDeliver(
             VertexContainer::iterator _begin, VertexContainer::iterator _end)
         {
-            switch ((*_begin)->primitiveType)
+            switch ((*_begin).primitiveType)
             {
                 case lightroom::PrimitiveInputType::LINES:
                     _assembleLines(_begin, _end);
@@ -183,7 +178,7 @@ namespace lightroom
         {
             for (auto _i = _begin, _j = ++_begin; _i != _end && _j != _end; ++++_i, ++++_j)
             {
-                _primitives.push_back(new _LineType({ *_i, *_j }));
+                _primitives.push_back(new _LineType({ &*_i, &*_j }));
             }
         }
         inline void _assembleLineStrip(
@@ -197,7 +192,7 @@ namespace lightroom
             }
             for (_i, _j; _j != _end; ++_i, ++_j)
             {
-                _primitives.push_back(new _LineType({ *_i, *_j }));
+                _primitives.push_back(new _LineType({ &*_i, &*_j }));
             }
         }
         inline void _assembleLineLoop(
@@ -212,9 +207,9 @@ namespace lightroom
             }
             for (_i, _j; _j != _end; ++_i, ++_j)
             {
-                _primitives.push_back(new _LineType({ *_i, *_j }));
+                _primitives.push_back(new _LineType({ &*_i, &*_j }));
             }
-            _primitives.push_back(new _LineType({ *_i, *_begin }));
+            _primitives.push_back(new _LineType({ &*_i, &*_begin }));
         }
         inline void _assembleTriangleStrip(
             VertexContainer::iterator _begin, VertexContainer::iterator _end)
@@ -229,7 +224,7 @@ namespace lightroom
             
             for (_i, _j, _k; _k != _end; ++_i, ++_j, ++_k)
             {
-                _primitives.push_back(new _TriangleType({ *_i, *_j, *_k }));
+                _primitives.push_back(new _TriangleType({ &*_i, &*_j, &*_k }));
             }
         }
         inline void _assembleTriangleFan(
@@ -244,7 +239,7 @@ namespace lightroom
             }
             for (_j, _k; _k != _end; ++_j, ++_k)
             {
-                _primitives.push_back(new _TriangleType({ *_i, *_j, *_k }));
+                _primitives.push_back(new _TriangleType({ &*_i, &*_j, &*_k }));
             }
         }
 
@@ -275,16 +270,16 @@ namespace lightroom
                 .apply(_perspective)
                 .apply(_ortho);
 
-            for (auto _v : _vertices)
+            for (auto& _v : _vertices)
             {
-                _v->apply(_tm);
+                _v.apply(_tm);
             }
         }
         void _perspectiveDivision()
         {
-            for (auto _v : _vertices)
+            for (auto& _v : _vertices)
             {
-                _v->position.divide();
+                _v.position.divide();
             }
         }
         void _viewportTransform()
@@ -293,9 +288,9 @@ namespace lightroom
             _tm.scale(viewport.getWidth() / 2.0, -viewport.getHeight() / 2.0, 1)
                 .translate((viewport.getWidth() - 1.0) / 2, (viewport.getHeight() - 1.0) / 2, 0);
 
-            for (auto _v : _vertices)
+            for (auto& _v : _vertices)
             {
-                _v->apply(_tm);
+                _v.apply(_tm);
             }
         }
     };
