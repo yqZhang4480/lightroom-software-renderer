@@ -1,6 +1,6 @@
 #pragma once
-#ifndef _SHADING_UTILITY_
-#define _SHADING_UTILITY_
+#ifndef _PIPELINE_UTILITY_
+#define _PIPELINE_UTILITY_
 
 #include "../lrutility.hpp"
 #include "../drawing.hpp"
@@ -16,11 +16,12 @@ namespace lightroom
         Angle fov;
         Float f = -10000;
 
-        Camara(const Vector<3>& _position, const Vector<3>& _gazeDirection,
-               const Vector<3>& _topDirection, Angle _fov) :
-            position(_position), gazeDirection(_gazeDirection), topDirection(_topDirection), fov(_fov) {}
+        inline Camara(const Vector<3>& _position, const Vector<3>& _gazeDirection,
+               const Vector<3>& _topDirection, Angle _fov);
 
-        void lookAt(const Vector<3>& _lookAtPosition)
+
+        /*
+        inline void lookAt(const Vector<3>& _lookAtPosition)
         {
             gazeDirection.toCartesian();
             auto& _g = gazeDirection;
@@ -31,17 +32,29 @@ namespace lightroom
             topDirection[1] = (topDirection[0] - _t[0]) * _g[1] / _g[0] + _t[1];
             topDirection[2] = (topDirection[0] - _t[0]) * _g[2] / _g[0] + _t[2];
         }
-        void apply(const TransformMixer3D& _mixer)
+        */
+
+        inline void apply(const TransformMixer3D& _mixer, bool _keepDirection = false);
+        inline Float getNPlain() const;
+    };
+
+    inline Camara::Camara(const Vector<3>& _position, const Vector<3>& _gazeDirection,
+                   const Vector<3>& _topDirection, Angle _fov) :
+        position(_position), gazeDirection(_gazeDirection, 0), topDirection(_topDirection, 0), fov(_fov) {}
+    inline void Camara::apply(const TransformMixer3D& _mixer, bool _keepDirection)
+    {
+        position.apply(_mixer);
+        if (!_keepDirection)
         {
-            position.apply(_mixer);
             gazeDirection.apply(_mixer);
             topDirection.apply(_mixer);
         }
-        Float getNPlain() const
-        {
-            return -cos(fov / 2) / sin(fov / 2);
-        }
-    };
+    }
+    inline Float Camara::getNPlain() const
+    {
+        return -cos(fov / 2) / sin(fov / 2);
+    }
+
 
     template <
         std::derived_from<Vertex3D> _VertexType,
@@ -296,4 +309,4 @@ namespace lightroom
     };
 };
 
-#endif // !_SHADING_UTILITY_
+#endif // !_PIPELINE_UTILITY_

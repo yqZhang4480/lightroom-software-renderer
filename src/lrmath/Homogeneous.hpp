@@ -7,7 +7,7 @@ namespace lightroom
     {
     public:
         // 由笛卡尔坐标构造齐次坐标
-        inline Homogeneous(const Vector<3>& _cartesianCoordinate);
+        inline Homogeneous(const Vector<3>& _cartesianCoordinate, Float _w = 1);
 
         // 对各分量除以w
         inline void divide();
@@ -25,14 +25,18 @@ namespace lightroom
             const Vector<_SRC_SIZE>& _source, Vector<_DST_SIZE>& _destination);
     };
 
-    inline Homogeneous::Homogeneous(const Vector<3>& _cartesianCoordinate)
+    inline Homogeneous::Homogeneous(const Vector<3>& _cartesianCoordinate, Float _w)
     {
         _overwrite_vector<3, 4>(_cartesianCoordinate, *this);
-        (*this)[3] = 1;
+        (*this)[3] = _w;
     }
 
     inline void Homogeneous::divide()
     {
+        if ((*this)[3] == Float(0))
+        {
+            return;
+        }
         *this /= (*this)[3];
     }
     inline Vector<3> Homogeneous::toCartesian()
@@ -44,12 +48,8 @@ namespace lightroom
     }
     inline Vector<3> Homogeneous::toCartesian() const
     {
-        Vector<3> _ret;
-        for (size_t _i = 0; _i < 3; _i++)
-        {
-            _ret[_i] = (*this)[_i] / (*this)[3];
-        }
-        return _ret;
+        Homogeneous _retH = *this;
+        return _retH.toCartesian();
     }
     inline Homogeneous& Homogeneous::apply(const TransformMixer3D& _mixer)
     {
