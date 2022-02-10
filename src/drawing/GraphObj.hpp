@@ -6,10 +6,10 @@ namespace lightroom
     class GraphObj3D
     {
     public:
-        virtual void draw(WritableColorMap* _out,
-                          DepthBuffer& _depthBuffer,
-                          Float _nplain, Float _fplain) const = 0;
-        virtual ~GraphObj3D() {}
+        virtual inline void draw(WritableColorMap* _out,
+                                 DepthBuffer& _depthBuffer,
+                                 Float _nplain, Float _fplain) const = 0;
+        virtual inline ~GraphObj3D() = default;
     };
 
     template <std::derived_from<Vertex3D> _VertexType>
@@ -17,20 +17,20 @@ namespace lightroom
     {
         std::array<_VertexType*, 2> _vertices;
     public:
-        Line3D(const std::array<_VertexType*, 2>& _vs) : _vertices(_vs)
+        inline Line3D(const std::array<_VertexType*, 2>& _vs) : _vertices(_vs)
         {
             for (auto& _v : _vs)
             {
                 _v->whenRegisteredByLine(this);
             }
         }
-        virtual ~Line3D() {}
+        virtual inline ~Line3D() {}
         inline bool isVaild() const
         {
             return _vertices[0] != nullptr && _vertices[1] != nullptr;
         }
 
-        virtual void draw(
+        virtual inline void draw(
             WritableColorMap* _outColorMap,
             DepthBuffer& _depthBuffer,
             Float _nplain, Float _fplain) const override final
@@ -172,7 +172,7 @@ namespace lightroom
             }
         }
 
-        virtual void putPixel(
+        virtual inline void putPixel(
             int _x, int _y, Float _t,
             WritableColorMap* _colorMap, DepthBuffer& _depthBuffer) const
         {
@@ -199,7 +199,7 @@ namespace lightroom
         }
 
     private:
-        void _sortVertices(_VertexType*& _v0, _VertexType*& _v1) const
+        inline void _sortVertices(_VertexType*& _v0, _VertexType*& _v1) const
         {
             if (_v0->position[0] > _v1->position[0])
             {
@@ -231,7 +231,7 @@ namespace lightroom
             return (_vertices[0] != nullptr) && (_vertices[1] != nullptr) && (_vertices[2] != nullptr);
         }
 
-        Float evaluateAreaSquare() const
+        inline Float evaluateAreaSquare() const
         {
             auto& _p0 = _vertices[0]->position;
             auto& _p1 = _vertices[1]->position;
@@ -241,7 +241,7 @@ namespace lightroom
             auto c = (_p1 - _p0).norm();
             return (a + b + c) * (a + b - c) * (b + c - a) * (c + a - b) / 16;
         }
-        Vector<3> evaluateNormal() const
+        inline Vector<3> evaluateNormal() const
         {
             auto _p0 = _vertices[0]->position.toCartesian();
             auto&& _p1 = _vertices[1]->position.toCartesian();
@@ -249,7 +249,7 @@ namespace lightroom
             return ((_p1 - _p0).cross(_p2 - _p0)).normalized();
         }
 
-        virtual void draw(
+        virtual inline void draw(
             WritableColorMap* _outColorMap,
             DepthBuffer& _depthBuffer,
             Float _nplain, Float _fplain) const override final
@@ -357,7 +357,7 @@ namespace lightroom
                 _func(_vertices[1]) * _beta  *  (_1_Z1 / _1_Zp) +
                 _func(_vertices[2]) * _gamma *  (_1_Z2 / _1_Zp);
         }
-        virtual void putPixel(
+        virtual inline void putPixel(
             int _x, int _y, Float _alpha, Float _beta, Float _gamma,
             WritableColorMap* _colorMap, DepthBuffer& _depthBuffer) const
         {

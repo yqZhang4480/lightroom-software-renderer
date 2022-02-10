@@ -7,7 +7,7 @@
 #define _WIN32_WINNT 0x0A00
 #ifndef _mutex_
 #define _mutex_
-#include <mutex>
+#include <mutex> 
 #endif // !_mutex_
 
 #ifndef _minmax_H_
@@ -54,6 +54,11 @@
 #define _list_
 #include <list>
 #endif // !_list_
+
+#ifndef _map_
+#define _map_
+#include <map>
+#endif // !_map_
 
 #ifndef _unordered_map_
 #define _unordered_map_
