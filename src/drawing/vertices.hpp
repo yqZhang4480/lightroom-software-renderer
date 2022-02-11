@@ -26,13 +26,16 @@ namespace lightroom
     protected:
         inline ~Vertex3D();
         template <
-            std::derived_from<Vertex3D> _VertexType,
-            std::derived_from<Line3D<_VertexType>>,
-            std::derived_from<Triangle3D<_VertexType>>>
+            typename _T1,
+            typename _T2,
+            typename _T3> requires
+            std::is_convertible_v<const _T1*, const  Vertex3D*> &&
+            std::is_convertible_v<const _T2*, const  Line3D<_T1>*> &&
+            std::is_convertible_v<const _T3*, const  Triangle3D<_T1>*>
              friend class Pipeline;
-        template <std::derived_from<Vertex3D>>
+        template <typename _T> requires std::is_convertible_v<const _T*, const  Vertex3D*> 
         friend class Triangle3D;
-        template <std::derived_from<Vertex3D>>
+        template <typename _T> requires std::is_convertible_v<const _T*, const  Vertex3D*> 
         friend class Line3D;
 
         template <typename _VertexType>

@@ -73,7 +73,7 @@ namespace lightroom
             }
         };
 
-        class TextureMain
+        class Textured
         {
         private:
             struct LockArgs
@@ -102,7 +102,7 @@ namespace lightroom
             ImageMap* texture;
             std::vector<TextureVertex3DIn*> vs;
         public:
-            TextureMain() :
+            Textured() :
                 texture(new ImageMap(L".\\test.png", PxCoordinate{ 1000, 1000 })),
                 vs({
                     new TextureVertex3DIn{ Vector<3>( 20, -25, -15), UVCoordinate(0, 1), texture },
@@ -143,7 +143,7 @@ namespace lightroom
                 }
             }
 
-            ~TextureMain()
+            ~Textured()
             {
                 delete output;
                 delete texture;

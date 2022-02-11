@@ -9,9 +9,9 @@ namespace lightroom
 {
     class Vertex3D;
     class GraphObj3D;
-    template <std::derived_from<Vertex3D>>
+    template <typename _T> requires std::is_convertible_v<const _T*, const  Vertex3D*> 
     class Line3D;
-    template <std::derived_from<Vertex3D>>
+    template <typename _T> requires std::is_convertible_v<const _T*, const  Vertex3D*> 
     class Triangle3D;
 
     enum class PrimitiveInputType : uint8_t

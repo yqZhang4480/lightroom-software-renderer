@@ -61,7 +61,7 @@ namespace lightroom
             }
         };
 
-        class ColoredVertexMain
+        class ColoredVertex
         {
         private:
             struct LockArgs
@@ -89,7 +89,7 @@ namespace lightroom
             SequenceMap* output;
             std::vector<ColoredVertex3DIn*> vs;
         public:
-            ColoredVertexMain() :
+            ColoredVertex() :
                 vs({
                     new ColoredVertex3DIn{ Vector<3>(-20, -20,  20), Color(0,0,1,1) },
                     new ColoredVertex3DIn{ Vector<3>( 20, -20,  20), Color(1,0,1,1) },
@@ -150,7 +150,7 @@ namespace lightroom
                 }
             }
 
-            ~ColoredVertexMain()
+            ~ColoredVertex()
             {
                 delete output;
 

@@ -57,9 +57,12 @@ namespace lightroom
 
 
     template <
-        std::derived_from<Vertex3D> _VertexType,
-        std::derived_from<Line3D<_VertexType>> _LineType,
-        std::derived_from<Triangle3D<_VertexType>> _TriangleType>
+        typename _VertexType,
+        typename _LineType,
+        typename _TriangleType> requires
+        std::is_convertible_v<const _VertexType*, const  Vertex3D*>&&
+        std::is_convertible_v<const _LineType*, const  Line3D<_VertexType>*>&&
+        std::is_convertible_v<const _TriangleType*, const  Triangle3D<_VertexType>*>
     class Pipeline final
     {
     public:
@@ -107,7 +110,7 @@ namespace lightroom
             _clearVertices();
         }
 
-        template <std::derived_from<Vertex3DIn> _VertexInType>
+        template <typename  _VertexInType> requires std::is_convertible_v<const  _VertexInType*, const Vertex3DIn*> 
         inline void input(PrimitiveInputType _inputType, const std::vector<_VertexInType*>& _vertexIns)
         {
             for (auto& _v : _vertexIns)
@@ -137,6 +140,11 @@ namespace lightroom
         {
             for (auto& _v : _vertices)
             {
+                [[unlikely]]
+                if (_v.primitiveType == PrimitiveInputType::NONE)
+                {
+                    continue;
+                }
                 _v.afterAssemble();
             }
         }
@@ -149,7 +157,7 @@ namespace lightroom
             {
                 return;
             }
-            for (auto _last = _vertices.begin(); ++_last != _end;)
+            for (auto _last = _first; ++_last != _end;)
             {
                 if ((*_last).primitiveType != (*_first).primitiveType)
                 {

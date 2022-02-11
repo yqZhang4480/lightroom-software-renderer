@@ -12,7 +12,7 @@ namespace lightroom
         virtual inline ~GraphObj3D() = default;
     };
 
-    template <std::derived_from<Vertex3D> _VertexType>
+    template <typename  _VertexType> requires std::is_convertible_v<const  _VertexType*, const Vertex3D*> 
     class Line3D : public GraphObj3D
     {
         std::array<_VertexType*, 2> _vertices;
@@ -208,7 +208,7 @@ namespace lightroom
         }
     };
 
-    template <std::derived_from<Vertex3D> _VertexType>
+    template <typename  _VertexType> requires std::is_convertible_v<const  _VertexType*, const Vertex3D*> 
     class Triangle3D : public GraphObj3D
     {
     protected:

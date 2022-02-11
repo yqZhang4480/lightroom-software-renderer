@@ -2,24 +2,52 @@
 #include <iostream>
 #include <set>
 #include "../lightroom.hpp"
+using namespace std;
 
 namespace lightroom
 {
     namespace sample
     {
-        class BasicVertex3D : public Vertex3D
+        class IndexedVertex3D : public Vertex3D
         {
         public:
-            BasicVertex3D(const Vertex3DIn* vin, PrimitiveInputType p) : Vertex3D(vin, p) {}
+            inline static size_t INDEX = 0;
+
+            size_t index;
+            vector<Triangle3D<IndexedVertex3D>*> triangles;
+            vector<Line3D<IndexedVertex3D>*> lines;
+            IndexedVertex3D(const Vertex3DIn* vin, PrimitiveInputType p) :
+                Vertex3D(vin, p), index(INDEX++){}
+
+            inline void whenRegisteredByTriangle(Triangle3D<IndexedVertex3D>* t)
+            {
+                triangles.push_back(t);
+            }
+            inline void whenRegisteredByLine(Line3D<IndexedVertex3D>* t)
+            {
+                lines.push_back(t);
+            }
+            inline void afterAssemble()
+            {
+                cout << "Vertex " << index << " is registered by" << endl;
+                for (auto& l : lines)
+                {
+                    cout << "line " << (const void*)l << endl;
+                }
+                for (auto& t : triangles)
+                {
+                    cout << "triangle " << (const void*)t << endl;
+                }
+            }
         };
 
-        class InputTypeMain
+        class InputType
         {
         private:
             SequenceMap* output;
             std::vector<Vertex3DIn*> vs;
         public:
-            InputTypeMain() :
+            InputType() :
                 vs({
                     new Vertex3DIn(Vector<3>(-15, -10, 0)),
                     new Vertex3DIn(Vector<3>(-5,  10, 0)),
@@ -33,7 +61,7 @@ namespace lightroom
 
                 auto camara = Camara(Vector<3>(0, 0, 50), Vector<3>(0, 0, -1), Vector<3>(0, 1, 0), 1.36);
 
-                auto pm = Pipeline<BasicVertex3D, Line3D<BasicVertex3D>, Triangle3D<BasicVertex3D>>(camara, output);
+                auto pm = Pipeline<IndexedVertex3D, Line3D<IndexedVertex3D>, Triangle3D<IndexedVertex3D>>(camara, output);
 
                 pm.input(PrimitiveInputType::LINES, vs);
                 pm.render();
@@ -65,7 +93,7 @@ namespace lightroom
                 output->wipe();
             }
 
-            ~InputTypeMain()
+            ~InputType()
             {
                 delete output;
 
