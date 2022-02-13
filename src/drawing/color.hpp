@@ -37,7 +37,14 @@ namespace lightroom
         {
             return _rgba[_index];
         }
-        inline Color& operator+= (const Color& _nc2)
+    public:
+        inline friend Color alphaMix(const Color& _fore, const Color& _back)
+        {
+            auto _alpha = _fore._rgba[3];
+            return _alpha * _fore + (1 - _alpha) * _back;
+        }
+
+        inline Color& operator+= (const Color& _nc2) &
         {
             _rgba[0] += _nc2._rgba[0];
             _rgba[1] += _nc2._rgba[1];
@@ -45,7 +52,15 @@ namespace lightroom
             _rgba[3] += _nc2._rgba[3];
             return *this;
         }
-        inline Color& operator*= (Float _factor)
+        inline Color operator+= (const Color& _nc2) &&
+        {
+            _rgba[0] += _nc2._rgba[0];
+            _rgba[1] += _nc2._rgba[1];
+            _rgba[2] += _nc2._rgba[2];
+            _rgba[3] += _nc2._rgba[3];
+            return *this;
+        }
+        inline Color& operator*= (Float _factor) &
         {
             _rgba[0] *= _factor;
             _rgba[1] *= _factor;
@@ -53,6 +68,15 @@ namespace lightroom
             _rgba[3] *= _factor;
             return *this;
         }
+        inline Color operator*= (Float _factor) &&
+        {
+            _rgba[0] *= _factor;
+            _rgba[1] *= _factor;
+            _rgba[2] *= _factor;
+            _rgba[3] *= _factor;
+            return *this;
+        }
+
         inline friend Color operator+ (Color _nc1, const Color& _nc2)
         {
             return _nc1 += _nc2;
@@ -65,7 +89,7 @@ namespace lightroom
         {
             return _nc *= _factor;
         }
-    protected:
+
         Float _rgba[4];
     };
 
@@ -147,8 +171,9 @@ namespace lightroom
 
         virtual Color get(size_t _index) const override
         {
-            return (_mask[_index] == true) ? _data[_index] :
-                (_background ? _background->get(_index) : Color(0, 0, 0, 1));
+            auto _backgroundColor = (_background ? _background->get(_index) : Color(0, 0, 0, 1));
+            return (_mask[_index] == true) ?
+                alphaMix(_data[_index], std::move(_backgroundColor)) : std::move(_backgroundColor);
         }
         virtual void set(size_t _index, const Color& _color) override
         {

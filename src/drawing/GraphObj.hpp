@@ -177,12 +177,7 @@ namespace lightroom
             WritableColorMap* _colorMap, DepthBuffer& _depthBuffer) const
         {
             int _index = _y * _colorMap->getWidth() + _x;
-            Float _depth = _t * _vertices[1]->position[2] + (1 - _t) * _vertices[0]->position[2];
-            if (_depth <= _depthBuffer[_index])
-            {
-                return;
-            }
-            _depthBuffer[_index] = _depth;
+
             _colorMap->set(_index, Color(1, 1, 1, 1));
         }
 
